@@ -9,7 +9,7 @@ A simple `build.sh` file is included that builds the project. Note that the buil
 
 ## Usage
 ### Publisher
-The following command line options can be provided:
+The publisher takes the following command line options:
 
 Option | Description
 ------------- | -------------
