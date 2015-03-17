@@ -10,16 +10,27 @@ A simple `build.sh` file is included that builds the project. Note that the buil
 ## Usage
 ### Publisher
  pub [--samples n] [--instances n] [--topics n] [--partitions n] [--type simple|payload] [--<qos>] [--help]
+ 
    --partitions:    set the number of partitions the test creates
+   
    --topics:        set the number of topics the test creates
+   
    --instances:     set the number of instances per topic the test will create
+   
    --samples:       set the number of samples per instance the test creates
+   
  qos settings:
+ 
    --latencybudget: set the latency budget to 100 msec
+   
    --noreliable:    disable Reliability (default is enabled)
+   
    --transient:     set durability to Transient (default is Volatile)
+   
    --persistent:    set durability to Persistent
+   
    --keepall:       set the history to KeepAll (default is KeepLast)
+   
    --type:          set the topic type
    
 ### Subscriber
