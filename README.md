@@ -5,7 +5,7 @@ Simple tool for benchmarking various OMG-DDS scenarios
 The dds-bench tool makes it easy to evaluate OMG-DDS performance in simple scenario's. A user can provide various settings such as number of instances, samples, topics, partitions and various QoS settings. The example is written using the ISO C++ API.
 
 ## Building
-A simple `build.sh` file is included that builds the project. Note that the build.sh file is written for Vortex OpenSplice.
+A simple `build.sh` file is included that builds the project. Note that the build.sh file is written for [OpenSplice](https://github.com/PrismTech/opensplice).
 
 ## Usage
 ### Publisher
