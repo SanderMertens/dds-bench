@@ -107,12 +107,18 @@ private:
 
 void printUsage() {
     std::cout << "Usage:" << std::endl <<
-         " pub [--samples n] [--instances n] [--topics n] [--partitions n] [--type simple|payload] [--help]" << std::endl <<
-         "   --partitions:   set the number of partitions the test creates" << std::endl <<
-         "   --topics:       set the number of topics the test creates" << std::endl <<
-         "   --instances:    set the number of instances per topic the test will create" << std::endl << 
-         "   --samples:      set the number of samples per instance the test creates" << std::endl <<
-         "   --type:         set the topic type" << std::endl;
+         " pub [--samples n] [--instances n] [--topics n] [--partitions n] [--type simple|payload] [--<qos>] [--help]" << std::endl <<
+         "   --partitions:    set the number of partitions the test creates" << std::endl <<
+         "   --topics:        set the number of topics the test creates" << std::endl <<
+         "   --instances:     set the number of instances per topic the test will create" << std::endl << 
+         "   --samples:       set the number of samples per instance the test creates" << std::endl <<
+         " qos settings:" << std::endl <<
+         "   --latencybudget: set the latency budget to 100 msec" << std::endl <<
+         "   --noreliable:    disable Reliability (default is enabled)" << std::endl <<
+         "   --transient:     set durability to Transient (default is Volatile)" << std::endl <<
+         "   --persistent:    set durability to Persistent" << std::endl <<
+         "   --keepall:       set the history to KeepAll (default is KeepLast)" << std::endl <<
+         "   --type:          set the topic type" << std::endl;
 }
 
 typedef enum CmdLineParse {
