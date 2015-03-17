@@ -9,7 +9,7 @@ A simple `build.sh` file is included that builds the project. Note that the buil
 
 ## Usage
 ### Publisher
- pub [--samples n] [--instances n] [--topics n] [--partitions n] [--type simple|payload] [--<qos>] [--help]
+ pub [--samples n] [--instances n] [--topics n] [--partitions n] [--type simple|payload] [--\<qos\>] [--help]
  
    --partitions:    set the number of partitions the test creates
    
