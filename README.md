@@ -25,8 +25,22 @@ Option | Description
   --type | set the topic type 
  
 #### Example
-`pub --topics 1000 --instances 1000 --samples 1`
+```
+pub --topics 1000 --instances 1000 --samples 1
+```
+Output:
+```
+Publisher: instances = 1000, samples = 1, topics = 1000, partitions = 1.
+qos
+ ├── reliability = Reliable
+ ├── latency_budget = 0s
+ ├── durability = Volatile
+ └── history = KeepLast
 
-Writes 1M samples (1000 * 1000 * 1).
+ >> creating entities
+ >> start publishing
+ >> writing 1000 * 1 * 1000 = 1000000 samples
+ >> done
+```
 ### Subscriber
 Not yet included.
