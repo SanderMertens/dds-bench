@@ -13,10 +13,10 @@ The following command line options can be provided:
 
 Option | Description
 ------------- | -------------
-  --partitions n | set the number of partitions the test creates
-  --topics n | set the number of topics the test creates
-  --instances | set the number of instances per topic the test will create
-  --samples | set the number of samples per instance the test creates
+  --partitions n | set the number of partitions
+  --topics n | set the number of topics
+  --instances | set the number of instances per topic
+  --samples | set the number of samples per instance
   --latencybudget | set the latency budget to 100 msec
   --noreliable | disable Reliability (default is enabled)
   --transient | set durability to Transient (default is Volatile)
