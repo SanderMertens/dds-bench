@@ -1,0 +1,16 @@
+
+module Perftest {
+    struct Simple {
+        long id;
+        long value;
+    };
+    #pragma keylist Simple id
+
+    typedef sequence<octet> OctetSeq;
+    struct Payload {
+        long id;
+        OctetSeq value;
+    };
+    #pragma keylist Payload id
+};
+
