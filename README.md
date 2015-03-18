@@ -1,5 +1,5 @@
 # dds-bench
-Simple tool for benchmarking various OMG-DDS scenarios
+Simple benchmarking tool for OMG-DDS
 
 ## Description
 The dds-bench tool makes it easy to evaluate OMG-DDS performance in simple scenario's. A user can provide various settings such as number of instances, samples, topics, partitions and various QoS settings. The example is written using the ISO C++ API.
