@@ -51,7 +51,7 @@ static void CtrlHandler(int fdwCtrlType)
 static void printUsage(void)
 {
     printf(
-      "Usage: osplbench [latency (default)|throughput] [options]\n\n"
+      "Usage: ddsbench [latency (default)|throughput] [options]\n\n"
       "Options:\n"
       "  --qos qos             Specify QoS (see QoS codes)\n"
       "  --partition name      Specify partition name\n"
