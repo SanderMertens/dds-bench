@@ -460,8 +460,8 @@ int subscriber(int subscriberId)
         if ((ddsbench_numsub == 1) || (subscriberId == 1)) {
             printf("\n");
             printf("Throughput measurements\n");
-            printf("          Total Received      Missing   Transfer rate            Publishers\n");
-            printf("        %9s %9s %9s %9s %14s %7s\n", "samples", "bytes", "samples", "samples", "bytes", "count");
+            printf("          Total Received        Missing   Transfer rate              Publishers\n");
+            printf("        %9s %11s %9s %9s %16s %7s\n", "samples", "bytes", "samples", "samples", "bytes", "count");
         }
 
         while (!DDS_GuardCondition_get_trigger_value(terminated)) {
@@ -518,7 +518,7 @@ int subscriber(int subscriberId)
                     deltaTv = exampleSubtractTimevalFromTimeval(&time, &prevTime);
                     deltaTime = (double)exampleTimevalToMicroseconds(&deltaTv) / US_IN_ONE_SEC;
 
-                    printf("sub %2d: %8.2lfK %7.2lfMB %9llu %8.2lfK %7.2lf Mbit/s %7lu\n",
+                    printf("sub %2d: %8.2lfK %9.2lfMB %9llu %8.2lfK %9.2lf Mbit/s %7lu\n",
                         subscriberId,
                         (double)samplesReceived(count, startCount, FALSE) / (double)1000,
                         (double)received / (double)BYTES_IN_MEGABYTE,
