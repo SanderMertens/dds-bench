@@ -92,7 +92,7 @@ static void printUsage(void)
       "When specifying a filter in latency measurements, be sure *not* to block any\n"
       "data, as this will disrupt the measurement. A safe filter that can be used to\n"
       "measure filter overhead is:\n"
-      " ddsbench latency --filter \"filter > 10\"\n"
+      " ddsbench latency --filter \"filter < 10\"\n"
       "\n"
     );
 }
