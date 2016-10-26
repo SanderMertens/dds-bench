@@ -106,7 +106,7 @@ void initialise(Entities *e, const char *pubPartition, const char *subPartition)
     /** A DDS_Topic is created for our sample type on the domain participant. */
     topicQos = ddsbench_getQos(ddsbench_qos);
     e->topic = DDS_DomainParticipant_create_topic(
-        ddsbench_dp, "RoundTrip", typeSupportName,
+        ddsbench_dp, ddsbench_topicname, typeSupportName,
         DDS_TOPIC_QOS_DEFAULT, 0, DDS_STATUS_MASK_NONE);
     CHECK_HANDLE_MACRO(e->topic);
     DDS_free(typeSupport);
@@ -307,7 +307,7 @@ int ping(int subscriberId)
         warmUp = FALSE;
         printf("sub %d: Warm up complete.\n", subscriberId);
 
-        if (subscriberId == 1) {
+        if ((ddsbench_numsub == 1) || (subscriberId == 1)) {
             printf("\n");
             printf("sub %d: Round trip measurements (in us)\n", subscriberId);
             printf("sub %d:             Round trip time [us]         Write-access time [us]       Read-access time [us]\n", subscriberId);

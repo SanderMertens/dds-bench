@@ -20,6 +20,7 @@ unsigned int ddsbench_numsub = -1; /* -1 indicates no value specified */
 unsigned int ddsbench_numpub = -1; /* -1 indicates no value specified */
 unsigned int ddsbench_subid = 0; /* -1 indicates no value specified */
 unsigned int ddsbench_pubid = 0; /* -1 indicates no value specified */
+char ddsbench_topicname[256];
 
 DDS_DomainParticipant ddsbench_dp;
 
@@ -99,7 +100,7 @@ static int parseArguments(int argc, char *argv[])
             else if (!strcmp(argv[i], "--numpub")) ddsbench_numpub = atoi(argv[i + 1]), i++;
             else if (!strcmp(argv[i], "--subid")) ddsbench_subid = atoi(argv[i + 1]), i++;
             else if (!strcmp(argv[i], "--pubid")) ddsbench_pubid = atoi(argv[i + 1]), i++;
-
+            else throw("invalid option %s", argv[1]);
         } else
         {
             if (!strcmp(argv[i], "latency") || !strcmp(argv[i], "throughput"))
@@ -140,6 +141,8 @@ static int parseArguments(int argc, char *argv[])
         throw("no publishers or subscribers specified.");
     }
 
+    sprintf(ddsbench_topicname, "%s_%s", ddsbench_mode, ddsbench_qos);
+
     return 0;
 error:
     return -1;
@@ -165,6 +168,7 @@ int main(int argc, char *argv[])
     printf("  config: %s\n", getenv("OSPL_URI"));
     printf("  mode: %s\n", ddsbench_mode);
     printf("  qos: %s\n", ddsbench_qos);
+    printf("  topic: %s\n", ddsbench_topicname);
     if (ddsbench_filter) {
         printf("  filter: %s\n", ddsbench_filter);
     }

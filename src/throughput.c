@@ -216,7 +216,7 @@ int publisher(int publisherId)
         /** A DDS_Topic is created for our sample type on the domain participant. */
         DDS_TopicQos *topicQos = ddsbench_getQos(ddsbench_qos);
         e->topic = DDS_DomainParticipant_create_topic(
-            ddsbench_dp, "Throughput", typename, DDS_TOPIC_QOS_DEFAULT, NULL, 0);
+            ddsbench_dp, ddsbench_topicname, typename, DDS_TOPIC_QOS_DEFAULT, NULL, 0);
         CHECK_HANDLE_MACRO(e->topic);
         DDS_free(typename);
 
@@ -384,7 +384,7 @@ int subscriber(int subscriberId)
         /** A DDS_Topic is created for our sample type on the domain participant. */
         DDS_TopicQos *topicQos = ddsbench_getQos(ddsbench_qos);
         e->topic = DDS_DomainParticipant_create_topic(
-            ddsbench_dp, "Throughput", typename, DDS_TOPIC_QOS_DEFAULT, NULL, 0);
+            ddsbench_dp, ddsbench_topicname, typename, DDS_TOPIC_QOS_DEFAULT, NULL, 0);
         CHECK_HANDLE_MACRO(e->topic);
         DDS_free(typename);
 
@@ -457,7 +457,12 @@ int subscriber(int subscriberId)
         unsigned long payloadSize = 0;
         double deltaTime = 0;
 
-        printf("sub %d: Waiting for samples...\n", subscriberId);
+        if ((ddsbench_numsub == 1) || (subscriberId == 1)) {
+            printf("\n");
+            printf("Throughput measurements\n");
+            printf("          Total Received      Missing   Transfer rate            Publishers\n");
+            printf("        %9s %9s %9s %9s %14s %7s\n", "samples", "bytes", "samples", "samples", "bytes", "count");
+        }
 
         while (!DDS_GuardCondition_get_trigger_value(terminated)) {
             /** If polling delay is set */
@@ -477,7 +482,7 @@ int subscriber(int subscriberId)
             for (i = 0; !DDS_GuardCondition_get_trigger_value(terminated) && i < samples->_length; i++) {
                 ph = info->_buffer[i].publication_handle;
                 if (info->_buffer[i].instance_state != DDS_ALIVE_INSTANCE_STATE){
-                    printf("sub %d: lost publisher %d\n", subscriberId, samples->_buffer[i].id);
+                    printf("sub %2d: lost publisher %d\n", subscriberId, samples->_buffer[i].id);
                     remove_handle(count, ph);
                 } else if (info->_buffer[i].valid_data) {
                     /** Check that the sample is the next one expected */
@@ -513,8 +518,7 @@ int subscriber(int subscriberId)
                     deltaTv = exampleSubtractTimevalFromTimeval(&time, &prevTime);
                     deltaTime = (double)exampleTimevalToMicroseconds(&deltaTv) / US_IN_ONE_SEC;
 
-                    printf("sub %d: Total Received: %.2lfK samples, %.2lf MB | Out of order: %llu samples | "
-                        "Transfer rate: %.2lfK samples/s, %.2lf Mbit/s | Publishers: %lu\n",
+                    printf("sub %2d: %8.2lfK %7.2lfMB %9llu %8.2lfK %7.2lf Mbit/s %7lu\n",
                         subscriberId,
                         (double)samplesReceived(count, startCount, FALSE) / (double)1000,
                         (double)received / (double)BYTES_IN_MEGABYTE,
