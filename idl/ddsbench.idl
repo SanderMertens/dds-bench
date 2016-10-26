@@ -1,0 +1,16 @@
+module ddsbench
+{
+    struct Latency
+    {
+        sequence<octet> payload;
+    };
+    #pragma keylist Latency
+
+    struct Throughput
+    {
+        long id;
+        unsigned long long count;
+        sequence<octet> payload;
+    };
+    #pragma keylist Throughput id
+};

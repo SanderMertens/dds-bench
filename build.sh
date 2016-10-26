@@ -1,2 +1,2 @@
-idlpp -lisocpp -S perftest.idl -d gen
-g++ pub_impl.cpp gen/*.cpp -I gen -g -m32 -I$OSPL_HOME/include -I$OSPL_HOME/include/sys -I$OSPL_HOME/include/dcps/C++/isocpp -I$OSPL_HOME/include/dcps/C++/SACPP -L$OSPL_HOME/lib -ldcpsisocpp -lddskernel -o pub
+idlpp -lc -S idl/ddsbench.idl -d idl
+gcc src/*.c idl/*.c -g -Iinclude -Iidl -I$OSPL_HOME/include -I$OSPL_HOME/include/sys -I$OSPL_HOME/include/dcps/C/SAC -L$OSPL_HOME/lib -ldcpssac -lddskernel -lpthread -o ddsbench
