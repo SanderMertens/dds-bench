@@ -13,11 +13,14 @@
 
 /** ddsbench configuration options */
 char *ddsbench_mode = "latency";
-char *ddsbench_qos = "vb";
+char *ddsbench_qos = "vr";
 char *ddsbench_filter = NULL;
 unsigned int ddsbench_payload = 4;
 unsigned int ddsbench_numsub = -1; /* -1 indicates no value specified */
 unsigned int ddsbench_numpub = -1; /* -1 indicates no value specified */
+unsigned int ddsbench_subid = 0; /* -1 indicates no value specified */
+unsigned int ddsbench_pubid = 0; /* -1 indicates no value specified */
+
 DDS_DomainParticipant ddsbench_dp;
 
 /** catch Ctrl-C */
@@ -57,6 +60,8 @@ static void printUsage(void)
       "  --payload bytes       Specify payload of messages\n"
       "  --numsub count        Specify number of subscribers\n"
       "  --numpub count        Specify number of publishers\n"
+      "  --pubid offset        Specify an offset for the publisher id\n"
+      "  --subid offset        Specify an offset for the subscriber id\n"
       "  --filter              Specify filter in OMG-DDS compliant SQL\n"
       "  --help                Display this usage information\n"
       "\n"
@@ -67,6 +72,15 @@ static void printUsage(void)
       "  b - best effort\n"
       "  r - reliable\n"
       "  The default QoS is 'vr'.\n"
+      "\n"
+      "When you want to run ddsbench with multiple processes, you can use subid\n"
+      "and pubid to specify unique ids for each application. For example, to setup\n"
+      "a throuhgput test with 3 publishers in different processes you do:\n"
+      " ddsbench throuhgput --numsub 1 &\n"
+      " ddsbench throuhgput --numpub 1 --pubid 1 &\n"
+      " ddsbench throuhgput --numpub 1 --pubid 2 &\n"
+      " ddsbench throuhgput --numpub 1 --pubid 3 &\n"
+      "\n"
     );
 }
 
@@ -83,6 +97,9 @@ static int parseArguments(int argc, char *argv[])
             else if (!strcmp(argv[i], "--payload")) ddsbench_payload = atoi(argv[i + 1]), i++;
             else if (!strcmp(argv[i], "--numsub")) ddsbench_numsub = atoi(argv[i + 1]), i++;
             else if (!strcmp(argv[i], "--numpub")) ddsbench_numpub = atoi(argv[i + 1]), i++;
+            else if (!strcmp(argv[i], "--subid")) ddsbench_subid = atoi(argv[i + 1]), i++;
+            else if (!strcmp(argv[i], "--pubid")) ddsbench_pubid = atoi(argv[i + 1]), i++;
+
         } else
         {
             if (!strcmp(argv[i], "latency") || !strcmp(argv[i], "throughput"))
@@ -148,8 +165,16 @@ int main(int argc, char *argv[])
     printf("  config: %s\n", getenv("OSPL_URI"));
     printf("  mode: %s\n", ddsbench_mode);
     printf("  qos: %s\n", ddsbench_qos);
-    printf("  filter: %s\n", ddsbench_filter ? ddsbench_filter : "<not specified>");
+    if (ddsbench_filter) {
+        printf("  filter: %s\n", ddsbench_filter);
+    }
     printf("  payload: %d bytes\n", ddsbench_payload);
+    if (ddsbench_subid) {
+        printf("  subscriber id: %d\n", ddsbench_subid);
+    }
+    if (ddsbench_pubid) {
+        printf("  publisher id: %d\n", ddsbench_pubid);
+    }
     printf("  # subscribers: %d\n", ddsbench_numsub);
     printf("  # publishers: %d\n", ddsbench_numpub);
 
@@ -190,7 +215,8 @@ int main(int argc, char *argv[])
     {
         for (i = 0; i < ddsbench_numsub; i++)
         {
-            if (pthread_create(&threads[i], NULL, ddsbench_latencySubscriberThread, (void*)(intptr_t)i + 1))
+            if (pthread_create
+              (&threads[i], NULL, ddsbench_latencySubscriberThread, (void*)(intptr_t)i + ddsbench_subid))
             {
                 throw("failed to create thread: %s", strerror(errno));
             }
@@ -198,7 +224,8 @@ int main(int argc, char *argv[])
 
         for (i = 0; i < ddsbench_numpub; i++)
         {
-            if (pthread_create(&threads[i + ddsbench_numsub], NULL, ddsbench_latencyPublisherThread, (void*)(intptr_t)i + 1))
+            if (pthread_create
+              (&threads[i + ddsbench_numsub], NULL, ddsbench_latencyPublisherThread, (void*)(intptr_t)i + ddsbench_pubid))
             {
                 throw("failed to create thread: %s", strerror(errno));
             }
@@ -206,7 +233,8 @@ int main(int argc, char *argv[])
     } else {
         for (i = 0; i < ddsbench_numsub; i++)
         {
-            if (pthread_create(&threads[i], NULL, ddsbench_throughputSubscriberThread, (void*)(intptr_t)i + 1))
+            if (pthread_create
+              (&threads[i], NULL, ddsbench_throughputSubscriberThread, (void*)(intptr_t)i + ddsbench_subid))
             {
                 throw("failed to create thread: %s", strerror(errno));
             }
@@ -214,7 +242,8 @@ int main(int argc, char *argv[])
 
         for (i = 0; i < ddsbench_numpub; i++)
         {
-            if (pthread_create(&threads[i + ddsbench_numsub], NULL, ddsbench_throughputPublisherThread, (void*)(intptr_t)i + 1))
+            if (pthread_create(
+              &threads[i + ddsbench_numsub], NULL, ddsbench_throughputPublisherThread, (void*)(intptr_t)i + ddsbench_pubid))
             {
                 throw("failed to create thread: %s", strerror(errno));
             }
