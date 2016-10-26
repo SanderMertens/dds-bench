@@ -283,7 +283,7 @@ int ping(int subscriberId)
     }
 
     startTime = exampleGetTime();
-    printf("ddsbench: sub %d: warming up to stabilise performance...\n", subscriberId);
+    printf("sub %d: warming up to stabilise performance...\n", subscriberId);
     while(!DDS_GuardCondition_get_trigger_value(terminated) && exampleTimevalToMicroseconds(&difference) / US_IN_ONE_SEC < 5)
     {
         status = ddsbench_LatencyDataWriter_write(e.writer, e.data, DDS_HANDLE_NIL);
@@ -305,13 +305,13 @@ int ping(int subscriberId)
     if(!DDS_GuardCondition_get_trigger_value(terminated))
     {
         warmUp = FALSE;
-        printf("ddsbench: sub %d: Warm up complete.\n", subscriberId);
+        printf("sub %d: Warm up complete.\n", subscriberId);
 
         if (subscriberId == 1) {
             printf("\n");
-            printf("ddsbench: sub %d: Round trip measurements (in us)\n", subscriberId);
-            printf("ddsbench: sub %d:             Round trip time [us]         Write-access time [us]       Read-access time [us]\n", subscriberId);
-            printf("ddsbench: sub %d: Seconds     Count   median      min      Count   median      min      Count   median      min\n", subscriberId);
+            printf("sub %d: Round trip measurements (in us)\n", subscriberId);
+            printf("sub %d:             Round trip time [us]         Write-access time [us]       Read-access time [us]\n", subscriberId);
+            printf("sub %d: Seconds     Count   median      min      Count   median      min      Count   median      min\n", subscriberId);
         }
     }
 
@@ -341,7 +341,7 @@ int ping(int subscriberId)
             {
                 if(e.samples->_length != 1)
                 {
-                    fprintf(stdout, "ddsbench: sub %d: %s%d%s", subscriberId, "ERROR: Ping received ", e.samples->_length,
+                    fprintf(stdout, "sub %d: %s%d%s", subscriberId, "ERROR: Ping received ", e.samples->_length,
                                 " samples but was expecting 1. Are multiple pong applications running?\n");
 
                     cleanup(&e);
@@ -349,7 +349,7 @@ int ping(int subscriberId)
                 }
                 else if(!e.info->_buffer[0].valid_data)
                 {
-                    printf("ddsbench: sub %d: ERROR: Ping received an invalid sample. Has pong terminated already?\n", subscriberId);
+                    printf("sub %d: ERROR: Ping received an invalid sample. Has pong terminated already?\n", subscriberId);
 
                     cleanup(&e);
                     exit(0);
@@ -387,7 +387,7 @@ int ping(int subscriberId)
             difference = exampleSubtractTimevalFromTimeval(&postTakeTime, &startTime);
             if(exampleTimevalToMicroseconds(&difference) > US_IN_ONE_SEC || (i && i == numSamples))
             {
-                printf ("ddsbench: sub %d: %7lu %9lu %8.0f %8lu %10lu %8.0f %8lu %10lu %8.0f %8lu\n",
+                printf ("sub %d: %7lu %9lu %8.0f %8lu %10lu %8.0f %8lu %10lu %8.0f %8lu\n",
                     subscriberId,
                     elapsed + 1,
                     e.roundTrip.count,
@@ -459,7 +459,7 @@ int pong(int publisherId)
     sprintf(pongPartition, "pong_%d", publisherId);
     initialise(&e, pongPartition, pingPartition);
 
-    printf("ddsbench: pub %d: Waiting for samples from ping to send back...\n", publisherId);
+    printf("pub %d: Waiting for samples from ping to send back...\n", publisherId);
     fflush(stdout);
 
     while(!DDS_GuardCondition_get_trigger_value(terminated))
@@ -480,7 +480,7 @@ int pong(int publisherId)
                 /** If writer has been disposed terminate pong */
                 if(e.info->_buffer[i].instance_state == DDS_NOT_ALIVE_DISPOSED_INSTANCE_STATE)
                 {
-                    printf("ddsbench: pub %d: Received termination request. Terminating.\n", publisherId);
+                    printf("pub %d: Received termination request. Terminating.\n", publisherId);
                     status = DDS_GuardCondition_set_trigger_value(terminated, TRUE);
                     CHECK_STATUS_MACRO(status);
                     break;

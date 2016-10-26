@@ -123,6 +123,25 @@ static HandleEntry* store_handle(HandleMap *map, DDS_InstanceHandle_t key)
     return &(map->entries[map->size - 1]);
 }
 
+static void remove_handle(HandleMap *map, DDS_InstanceHandle_t key)
+{
+    HandleEntry *entry = NULL;
+    unsigned long i;
+
+    for (i = 0; i < map->size; i++) {
+        entry = &(map->entries[i]);
+        if (entry->handle == key) {
+            map->size --;
+            if (i != map->size) {
+                entry->handle = map->entries[map->size].handle;
+                entry->count = map->entries[map->size].count;
+                entry->count = 0;
+            }
+            break;
+        }
+    }
+}
+
 static HandleEntry* retrieve_handle(HandleMap *map, DDS_InstanceHandle_t key)
 {
     HandleEntry *entry = NULL;
@@ -249,7 +268,7 @@ int publisher(int publisherId)
         int timedOut = FALSE;
 
         handle = ddsbench_ThroughputDataWriter_register_instance(e->writer, &sample);
-        printf("ddsbench: pub %d: Writing samples...\n", publisherId);
+        printf("pub %d: Writing samples...\n", publisherId);
         pubStart = exampleGetTime();
         burstStart = exampleGetTime();
 
@@ -259,7 +278,7 @@ int publisher(int publisherId)
                 do {
                     status = ddsbench_ThroughputDataWriter_write(e->writer, &sample, handle);
                     if (status == DDS_RETCODE_TIMEOUT) {
-                        printf("ddsbench: pub %d: timeout, retrying in 100msec\n", publisherId);
+                        printf("pub %d: timeout, retrying in 100msec\n", publisherId);
                         exampleSleepMilliseconds(100);
                     }
                 } while (status == DDS_RETCODE_TIMEOUT);
@@ -292,9 +311,9 @@ int publisher(int publisherId)
         }
 
         if (DDS_GuardCondition_get_trigger_value(terminated)) {
-            printf("ddsbench: pub %d: Terminated, %llu samples written.\n", publisherId, sample.count);
+            printf("pub %d: Terminated, %llu samples written.\n", publisherId, sample.count);
         } else {
-            printf("ddsbench: pub %d: Timed out, %llu samples written.\n", publisherId, sample.count);
+            printf("pub %d: Timed out, %llu samples written.\n", publisherId, sample.count);
         }
     }
 
@@ -438,7 +457,7 @@ int subscriber(int subscriberId)
         unsigned long payloadSize = 0;
         double deltaTime = 0;
 
-        printf("ddsbench: sub %d: Waiting for samples...\n", subscriberId);
+        printf("sub %d: Waiting for samples...\n", subscriberId);
 
         while (!DDS_GuardCondition_get_trigger_value(terminated)) {
             /** If polling delay is set */
@@ -456,9 +475,11 @@ int subscriber(int subscriberId)
                 DDS_ANY_SAMPLE_STATE, DDS_ANY_VIEW_STATE, DDS_ANY_INSTANCE_STATE);
             CHECK_STATUS_MACRO(status);
             for (i = 0; !DDS_GuardCondition_get_trigger_value(terminated) && i < samples->_length; i++) {
-                if (info->_buffer[i].valid_data) {
-                    ph = info->_buffer[i].publication_handle;
-
+                ph = info->_buffer[i].publication_handle;
+                if (info->_buffer[i].instance_state != DDS_ALIVE_INSTANCE_STATE){
+                    printf("sub %d: lost publisher %d\n", subscriberId, samples->_buffer[i].id);
+                    remove_handle(count, ph);
+                } else if (info->_buffer[i].valid_data) {
                     /** Check that the sample is the next one expected */
                     pubCount = retrieve_handle(count, ph);
                     pubStartCount = retrieve_handle(startCount, ph);
@@ -492,14 +513,15 @@ int subscriber(int subscriberId)
                     deltaTv = exampleSubtractTimevalFromTimeval(&time, &prevTime);
                     deltaTime = (double)exampleTimevalToMicroseconds(&deltaTv) / US_IN_ONE_SEC;
 
-                    printf("ddsbench: sub %d: Total Received: %.2lfK samples, %.2lf MB | Out of order: %llu samples | "
-                        "Transfer rate: %.2lfK samples/s, %.2lf Mbit/s\n",
+                    printf("sub %d: Total Received: %.2lfK samples, %.2lf MB | Out of order: %llu samples | "
+                        "Transfer rate: %.2lfK samples/s, %.2lf Mbit/s | Publishers: %lu\n",
                         subscriberId,
                         (double)samplesReceived(count, startCount, FALSE) / (double)1000,
                         (double)received / (double)BYTES_IN_MEGABYTE,
                         outOfOrder,
                         (samplesReceived(count, prevCount, TRUE) / deltaTime) / 1000,
-                        ((double)deltaReceived / (double)BYTES_PER_SEC_TO_MEGABITS_PER_SEC) / (double)deltaTime);
+                        ((double)deltaReceived / (double)BYTES_PER_SEC_TO_MEGABITS_PER_SEC) / (double)deltaTime,
+                        count->size);
                     fflush (stdout);
                     cycles++;
                 } else {
