@@ -2,6 +2,7 @@ module ddsbench
 {
     struct Latency
     {
+        long filter; // Field that can be used for filter
         sequence<octet> payload;
     };
     #pragma keylist Latency
@@ -9,6 +10,7 @@ module ddsbench
     struct Throughput
     {
         long id;
+        long filter; // Field that can be used for filter
         unsigned long long count;
         sequence<octet> payload;
     };

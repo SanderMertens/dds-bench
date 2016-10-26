@@ -68,6 +68,8 @@ typedef struct SubEntities {
     ddsbench_ThroughputTypeSupport typeSupport;
     /** The Topic used by the subscriber */
     DDS_Topic topic;
+    /** The Topic used when a filter is specified */
+    DDS_ContentFilteredTopic filter;
     /** The Subscriber used by the subscriber */
     DDS_Subscriber subscriber;
     /** The DataReader used by the subscriber */
@@ -272,7 +274,10 @@ int publisher(int publisherId)
         pubStart = exampleGetTime();
         burstStart = exampleGetTime();
 
-        while (!DDS_GuardCondition_get_trigger_value(terminated) && !timedOut) {
+        unsigned long long i;
+        for (i = 0; !DDS_GuardCondition_get_trigger_value(terminated) && !timedOut; i++) {
+            sample.filter = i % 10;
+
             /** Write data until burst size has been reached */
             if (burstCount < burstSize) {
                 do {
@@ -388,6 +393,20 @@ int subscriber(int subscriberId)
         CHECK_HANDLE_MACRO(e->topic);
         DDS_free(typename);
 
+        /** Create a ContentFilteredTopic if a filter is specified. */
+        if (ddsbench_filter) {
+            DDS_StringSeq *parameterList = DDS_StringSeq__alloc();
+            CHECK_HANDLE_MACRO(parameterList);
+            e->filter = DDS_DomainParticipant_create_contentfilteredtopic(
+                ddsbench_dp,
+                ddsbench_filtername,
+                e->topic,
+                ddsbench_filter,
+                parameterList);
+            CHECK_HANDLE_MACRO(e->filter);
+            DDS_free(parameterList);
+        }
+
         /** A DDS_Subscriber is created on the domain participant. */
         subQos = DDS_SubscriberQos__alloc();
         status = DDS_DomainParticipant_get_default_subscriber_qos(ddsbench_dp, subQos);
@@ -409,7 +428,11 @@ int subscriber(int subscriberId)
         CHECK_STATUS_MACRO(status);
         drQos->history.kind = DDS_KEEP_ALL_HISTORY_QOS;
         drQos->resource_limits.max_samples = 400;
-        e->reader = DDS_Subscriber_create_datareader(e->subscriber, e->topic, drQos, NULL, 0);
+        if (!e->filter) {
+            e->reader = DDS_Subscriber_create_datareader(e->subscriber, e->topic, drQos, NULL, 0);
+        } else {
+            e->reader = DDS_Subscriber_create_datareader(e->subscriber, e->filter, drQos, NULL, 0);
+        }
         CHECK_HANDLE_MACRO(e->reader);
         DDS_free(drQos);
 

@@ -46,6 +46,8 @@ typedef struct
 {
     /** The Topic used by ping and pong */
     DDS_Topic topic;
+    /** The Topic used when a filter is specified */
+    DDS_ContentFilteredTopic filter;
     /** The Publisher used by ping and pong */
     DDS_Publisher publisher;
     /** The DataWriter used by ping and pong */
@@ -112,6 +114,20 @@ void initialise(Entities *e, const char *pubPartition, const char *subPartition)
     DDS_free(typeSupport);
     DDS_free(typeSupportName);
 
+    /** A DDS_ContentFilteredTopic is created if a filter is specified. */
+    if (ddsbench_filter) {
+        DDS_StringSeq *parameterList = DDS_StringSeq__alloc();
+        CHECK_HANDLE_MACRO(parameterList);
+        e->filter = DDS_DomainParticipant_create_contentfilteredtopic(
+            ddsbench_dp,
+            ddsbench_filtername,
+            e->topic,
+            ddsbench_filter,
+            parameterList);
+        CHECK_HANDLE_MACRO(e->filter);
+        DDS_free(parameterList);
+    }
+
     /** A DDS_Publisher is created on the domain participant. */
     pubQos = DDS_PublisherQos__alloc();
     CHECK_HANDLE_MACRO(pubQos);
@@ -161,8 +177,13 @@ void initialise(Entities *e, const char *pubPartition, const char *subPartition)
     CHECK_STATUS_MACRO(status);
     status = DDS_Subscriber_copy_from_topic_qos(e->subscriber, drQos, topicQos);
     CHECK_STATUS_MACRO(status);
-    e->reader = DDS_Subscriber_create_datareader(
-        e->subscriber, e->topic, drQos, 0, DDS_STATUS_MASK_NONE);
+    if (!ddsbench_filter) {
+        e->reader = DDS_Subscriber_create_datareader(
+            e->subscriber, e->topic, drQos, 0, DDS_STATUS_MASK_NONE);
+    } else {
+        e->reader = DDS_Subscriber_create_datareader(
+            e->subscriber, e->filter, drQos, 0, DDS_STATUS_MASK_NONE);
+    }
     CHECK_HANDLE_MACRO(e->reader);
     DDS_free(drQos);
 
@@ -309,9 +330,9 @@ int ping(int subscriberId)
 
         if ((ddsbench_numsub == 1) || (subscriberId == 1)) {
             printf("\n");
-            printf("sub %d: Round trip measurements (in us)\n", subscriberId);
-            printf("sub %d:             Round trip time [us]         Write-access time [us]       Read-access time [us]\n", subscriberId);
-            printf("sub %d: Seconds     Count   median      min      Count   median      min      Count   median      min\n", subscriberId);
+            printf("        Round trip measurements (in us)\n");
+            printf("                    Round trip time [us]         Write-access time [us]       Read-access time [us]\n");
+            printf("        Seconds     Count   median      min      Count   median      min      Count   median      min\n");
         }
     }
 
@@ -319,6 +340,7 @@ int ping(int subscriberId)
     for(i = 0; !DDS_GuardCondition_get_trigger_value(terminated); i++)
     {
         /** Write a sample that pong can send back */
+        e.data->filter = i % 10;
         preWriteTime = exampleGetTime();
         status = ddsbench_LatencyDataWriter_write(e.writer, e.data, DDS_HANDLE_NIL);
         postWriteTime = exampleGetTime();

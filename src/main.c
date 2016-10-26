@@ -21,6 +21,7 @@ unsigned int ddsbench_numpub = -1; /* -1 indicates no value specified */
 unsigned int ddsbench_subid = 0; /* -1 indicates no value specified */
 unsigned int ddsbench_pubid = 0; /* -1 indicates no value specified */
 char ddsbench_topicname[256];
+char ddsbench_filtername[256];
 
 DDS_DomainParticipant ddsbench_dp;
 
@@ -82,6 +83,17 @@ static void printUsage(void)
       " ddsbench throuhgput --numpub 1 --pubid 2 &\n"
       " ddsbench throuhgput --numpub 1 --pubid 3 &\n"
       "\n"
+      "When specifying a filter, you can use the 'filter' field, which is a member\n"
+      "in both the types used for latency and throughput benchmarking. The filter\n"
+      "field will cycle through the numbers one through 10. To specify a filter that\n"
+      "blocks 50%% of the traffic, do:\n"
+      " ddsbench throughput --filter \"filter < 5\"\n"
+      "\n"
+      "When specifying a filter in latency measurements, be sure *not* to block any\n"
+      "data, as this will disrupt the measurement. A safe filter that can be used to\n"
+      "measure filter overhead is:\n"
+      " ddsbench latency --filter \"filter > 10\"\n"
+      "\n"
     );
 }
 
@@ -137,11 +149,22 @@ static int parseArguments(int argc, char *argv[])
         }
     }
 
+    if (ddsbench_filter) {
+        printf(
+          "\n"
+          "Note: when specifying a filter, throughput will appear to decrease\n"
+          "because the subscriber is receiving less data.\n"
+          "When measuring the overhead of a filter on latency you have to specify\n"
+          "a filter thatdoes *not* block any data, as this will disrupt the\n"
+          "measurement. An example of such a filter is: 'filter > 10'.\n\n");
+    }
+
     if ((ddsbench_numsub <= 0) && (ddsbench_numpub <= 0)) {
         throw("no publishers or subscribers specified.");
     }
 
     sprintf(ddsbench_topicname, "%s_%s", ddsbench_mode, ddsbench_qos);
+    sprintf(ddsbench_filtername, "%s_%s_filter", ddsbench_mode, ddsbench_qos);
 
     return 0;
 error:
