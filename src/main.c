@@ -53,8 +53,7 @@ static void printUsage(void)
     printf(
       "Usage: ddsbench [latency (default)|throughput] [options]\n\n"
       "Options:\n"
-      "  --qos qos             Specify QoS (see QoS codes)\n"
-      "  --partition name      Specify partition name\n"
+      "  --qos v|t|p|b|r       Specify QoS (see QoS codes)\n"
       "  --payload bytes       Specify payload of messages\n"
       "  --numsub count        Specify number of subscribers\n"
       "  --numpub count        Specify number of publishers\n"
@@ -62,11 +61,11 @@ static void printUsage(void)
       "  --help                Display this usage information\n"
       "\n"
       "Use a combination of the following letters to specify a QoS:\n"
-      "  v                     volatile\n"
-      "  t                     transient\n"
-      "  p                     persistent\n"
-      "  b                     best effort\n"
-      "  r                     reliable\n"
+      "  v - volatile\n"
+      "  t - transient\n"
+      "  p - persistent\n"
+      "  b - best effort\n"
+      "  r - reliable\n"
       "  The default QoS is 'vr'.\n"
     );
 }

@@ -159,7 +159,7 @@ void initialise(Entities *e, const char *pubPartition, const char *subPartition)
     CHECK_HANDLE_MACRO(drQos);
     status = DDS_Subscriber_get_default_datareader_qos(e->subscriber, drQos);
     CHECK_STATUS_MACRO(status);
-    status = DDS_Publisher_copy_from_topic_qos(e->publisher, dwQos, topicQos);
+    status = DDS_Subscriber_copy_from_topic_qos(e->subscriber, drQos, topicQos);
     CHECK_STATUS_MACRO(status);
     e->reader = DDS_Subscriber_create_datareader(
         e->subscriber, e->topic, drQos, 0, DDS_STATUS_MASK_NONE);
