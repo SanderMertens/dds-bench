@@ -111,16 +111,11 @@ static int parseArguments(int argc, char *argv[])
      * match exactly. Take whichever one the user provided */
     if (ddsbench_numpub != ddsbench_numsub) {
         if (!strcmp(ddsbench_mode, "latency")) {
-            if (ddsbench_numpub > ddsbench_numsub) {
-                ddsbench_numsub = ddsbench_numpub;
-            } else {
-                ddsbench_numpub = ddsbench_numsub;
-            }
             printf(
               "\n"
               "Note: to measure latency, ddsbench uses one publisher and subscriber\n"
               "that perform a roundtrip. This requires the number of subscribers and\n"
-              "publishers to match exactly. Taking the maximum of specified numbers.\n\n");
+              "publishers to match exactly.\n\n");
         }
     }
 

@@ -387,7 +387,7 @@ int ping(int subscriberId)
             difference = exampleSubtractTimevalFromTimeval(&postTakeTime, &startTime);
             if(exampleTimevalToMicroseconds(&difference) > US_IN_ONE_SEC || (i && i == numSamples))
             {
-                printf ("ddsbench: sub %d: %9lu %9lu %8.0f %8lu %10lu %8.0f %8lu %10lu %8.0f %8lu\n",
+                printf ("ddsbench: sub %d: %7lu %9lu %8.0f %8lu %10lu %8.0f %8lu %10lu %8.0f %8lu\n",
                     subscriberId,
                     elapsed + 1,
                     e.roundTrip.count,
