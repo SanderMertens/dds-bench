@@ -85,7 +85,7 @@ typedef struct
 * This function initialises the entities used by ping and pong, or exit
 * on any failure.
 */
-void initialise(Entities *e, const char *pubPartition, const char *subPartition)
+void initialise(Entities *e, const char *topicName, const char *pubPartition, const char *subPartition)
 {
     DDS_PublisherQos *pubQos;
     DDS_DataWriterQos *dwQos;
@@ -108,7 +108,7 @@ void initialise(Entities *e, const char *pubPartition, const char *subPartition)
     /** A DDS_Topic is created for our sample type on the domain participant. */
     topicQos = ddsbench_getQos(ddsbench_qos);
     e->topic = DDS_DomainParticipant_create_topic(
-        ddsbench_dp, ddsbench_topicname, typeSupportName,
+        ddsbench_dp, topicName, typeSupportName,
         DDS_TOPIC_QOS_DEFAULT, 0, DDS_STATUS_MASK_NONE);
     CHECK_HANDLE_MACRO(e->topic);
     DDS_free(typeSupport);
@@ -248,7 +248,6 @@ void cleanup(Entities *e)
     status = DDS_WaitSet_detach_condition(e->waitSet, terminated);
     CHECK_STATUS_MACRO(status);
     DDS_free(e->waitSet);
-    DDS_free(terminated);
 
     exampleDeleteTimeStats(&e->roundTrip);
     exampleDeleteTimeStats(&e->writeAccess);
@@ -264,7 +263,7 @@ void cleanup(Entities *e)
  * This function performs the Ping role in this example.
  * @return 0 if a sample is successfully written, 1 otherwise.
  */
-int ping(int subscriberId)
+int ping(ddsbench_threadArg *arg)
 {
     unsigned long payloadSize = 0;
     unsigned long long numSamples = 0;
@@ -287,9 +286,9 @@ int ping(int subscriberId)
     /** Initialise entities */
     Entities e;
     char pingPartition[32], pongPartition[32];
-    sprintf(pingPartition, "ping_%d", subscriberId);
-    sprintf(pongPartition, "pong_%d", subscriberId);
-    initialise(&e, pingPartition, pongPartition);
+    sprintf(pingPartition, "ping_%d", arg->id);
+    sprintf(pongPartition, "pong_%d", arg->id);
+    initialise(&e, arg->topicName, pingPartition, pongPartition);
 
     setbuf(stdout, NULL);
 
@@ -304,7 +303,7 @@ int ping(int subscriberId)
     }
 
     startTime = exampleGetTime();
-    printf("sub %d: warming up to stabilise performance...\n", subscriberId);
+    printf("sub %d: warming up to stabilise performance...\n", arg->id);
     while(!DDS_GuardCondition_get_trigger_value(terminated) && exampleTimevalToMicroseconds(&difference) / US_IN_ONE_SEC < 5)
     {
         status = ddsbench_LatencyDataWriter_write(e.writer, e.data, DDS_HANDLE_NIL);
@@ -326,13 +325,13 @@ int ping(int subscriberId)
     if(!DDS_GuardCondition_get_trigger_value(terminated))
     {
         warmUp = FALSE;
-        printf("sub %d: Warm up complete.\n", subscriberId);
+        printf("sub %d: Warm up complete.\n", arg->id);
 
-        if ((ddsbench_numsub == 1) || (subscriberId == 1)) {
+        if (arg->id == ddsbench_numsub) {
             printf("\n");
-            printf("        Round trip measurements (in us)\n");
-            printf("                    Round trip time [us]         Write-access time [us]       Read-access time [us]\n");
-            printf("        Seconds     Count   median      min      Count   median      min      Count   median      min\n");
+            printf("          Round trip measurements (in us)\n");
+            printf("                      Round trip time [us]         Write-access time [us]       Read-access time [us]\n");
+            printf("          Seconds     Count   median      min      Count   median      min      Count   median      min\n");
         }
     }
 
@@ -363,7 +362,7 @@ int ping(int subscriberId)
             {
                 if(e.samples->_length != 1)
                 {
-                    fprintf(stdout, "sub %d: %s%d%s", subscriberId, "ERROR: Ping received ", e.samples->_length,
+                    fprintf(stdout, "sub %d: %s%d%s", arg->id, "ERROR: Ping received ", e.samples->_length,
                                 " samples but was expecting 1. Are multiple pong applications running?\n");
 
                     cleanup(&e);
@@ -371,7 +370,7 @@ int ping(int subscriberId)
                 }
                 else if(!e.info->_buffer[0].valid_data)
                 {
-                    printf("sub %d: ERROR: Ping received an invalid sample. Has pong terminated already?\n", subscriberId);
+                    printf("sub %d: ERROR: Ping received an invalid sample. Has pong terminated already?\n", arg->id);
 
                     cleanup(&e);
                     exit(0);
@@ -409,8 +408,8 @@ int ping(int subscriberId)
             difference = exampleSubtractTimevalFromTimeval(&postTakeTime, &startTime);
             if(exampleTimevalToMicroseconds(&difference) > US_IN_ONE_SEC || (i && i == numSamples))
             {
-                printf ("sub %d: %8lu %9lu %8.0f %8lu %10lu %8.0f %8lu %10lu %8.0f %8lu\n",
-                    subscriberId,
+                printf ("sub %3d: %8lu %9lu %8.0f %8lu %10lu %8.0f %8lu %10lu %8.0f %8lu\n",
+                    arg->id,
                     elapsed + 1,
                     e.roundTrip.count,
                     exampleGetMedianFromTimeStats(&e.roundTrip),
@@ -447,7 +446,7 @@ int ping(int subscriberId)
     {
         /** Print overall stats */
         printf ("\nddsbench: sub %d: %9s %9lu %8.0f %8lu %10lu %8.0f %8lu %10lu %8.0f %8lu\n",
-                    subscriberId,
+                    arg->id,
                     "Overall",
                     e.roundTripOverall.count,
                     exampleGetMedianFromTimeStats(&e.roundTripOverall),
@@ -468,7 +467,7 @@ int ping(int subscriberId)
  * Runs the Pong role in this example.
  * @return 0 if a sample is successfully read, 1 otherwise.
  */
-int pong(int publisherId)
+int pong(ddsbench_threadArg *arg)
 {
     DDS_ReturnCode_t status;
     DDS_Duration_t waitTimeout = DDS_DURATION_INFINITE;
@@ -477,11 +476,11 @@ int pong(int publisherId)
     /** Initialise entities */
     Entities e;
     char pingPartition[32], pongPartition[32];
-    sprintf(pingPartition, "ping_%d", publisherId);
-    sprintf(pongPartition, "pong_%d", publisherId);
-    initialise(&e, pongPartition, pingPartition);
+    sprintf(pingPartition, "ping_%d", arg->id);
+    sprintf(pongPartition, "pong_%d", arg->id);
+    initialise(&e, arg->topicName, pongPartition, pingPartition);
 
-    printf("pub %d: Waiting for samples from ping to send back...\n", publisherId);
+    printf("pub %d: Waiting for samples from ping to send back...\n", arg->id);
     fflush(stdout);
 
     while(!DDS_GuardCondition_get_trigger_value(terminated))
@@ -502,7 +501,7 @@ int pong(int publisherId)
                 /** If writer has been disposed terminate pong */
                 if(e.info->_buffer[i].instance_state == DDS_NOT_ALIVE_DISPOSED_INSTANCE_STATE)
                 {
-                    printf("pub %d: Received termination request. Terminating.\n", publisherId);
+                    printf("pub %d: Received termination request. Terminating.\n", arg->id);
                     status = DDS_GuardCondition_set_trigger_value(terminated, TRUE);
                     CHECK_STATUS_MACRO(status);
                     break;
@@ -525,9 +524,9 @@ int pong(int publisherId)
 }
 
 void* ddsbench_latencySubscriberThread(void *arg) {
-    ping((intptr_t)arg);
+    ping(arg);
 }
 
 void* ddsbench_latencyPublisherThread(void *arg) {
-    pong((intptr_t)arg);
+    pong(arg);
 }

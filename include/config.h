@@ -20,6 +20,11 @@ extern char ddsbench_filtername[256];
 extern DDS_GuardCondition terminated;
 extern DDS_DomainParticipant ddsbench_dp;
 
+typedef struct ddsbench_threadArg {
+    int id;
+    char topicName[256];
+} ddsbench_threadArg;
+
 #ifdef __cplusplus
 }
 #endif

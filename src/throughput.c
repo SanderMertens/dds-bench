@@ -183,7 +183,7 @@ static void copy_handles(HandleMap *from, HandleMap *to)
  * This function performs the publisher role in this example.
  * @return 0 if a sample is successfully written, 1 otherwise.
  */
-int publisher(int publisherId)
+int publisher(ddsbench_threadArg *arg)
 {
     int result = EXIT_SUCCESS;
     unsigned long payloadSize = 4096;
@@ -218,7 +218,7 @@ int publisher(int publisherId)
         /** A DDS_Topic is created for our sample type on the domain participant. */
         DDS_TopicQos *topicQos = ddsbench_getQos(ddsbench_qos);
         e->topic = DDS_DomainParticipant_create_topic(
-            ddsbench_dp, ddsbench_topicname, typename, DDS_TOPIC_QOS_DEFAULT, NULL, 0);
+            ddsbench_dp, arg->topicName, typename, DDS_TOPIC_QOS_DEFAULT, NULL, 0);
         CHECK_HANDLE_MACRO(e->topic);
         DDS_free(typename);
 
@@ -252,7 +252,7 @@ int publisher(int publisherId)
     {
         unsigned long i;
 
-        sample.id = publisherId;
+        sample.id = arg->id;
         sample.count = 0;
         sample.payload._buffer = DDS_sequence_octet_allocbuf(payloadSize);
         sample.payload._length = payloadSize;
@@ -270,7 +270,6 @@ int publisher(int publisherId)
         int timedOut = FALSE;
 
         handle = ddsbench_ThroughputDataWriter_register_instance(e->writer, &sample);
-        printf("pub %d: Writing samples...\n", publisherId);
         pubStart = exampleGetTime();
         burstStart = exampleGetTime();
 
@@ -283,7 +282,7 @@ int publisher(int publisherId)
                 do {
                     status = ddsbench_ThroughputDataWriter_write(e->writer, &sample, handle);
                     if (status == DDS_RETCODE_TIMEOUT) {
-                        printf("pub %d: timeout, retrying in 100msec\n", publisherId);
+                        printf("pub %d: timeout, retrying in 100msec\n", arg->id);
                         exampleSleepMilliseconds(100);
                     }
                 } while (status == DDS_RETCODE_TIMEOUT);
@@ -316,9 +315,9 @@ int publisher(int publisherId)
         }
 
         if (DDS_GuardCondition_get_trigger_value(terminated)) {
-            printf("pub %d: Terminated, %llu samples written.\n", publisherId, sample.count);
+            printf("pub %d: Terminated, %llu samples written.\n", arg->id, sample.count);
         } else {
-            printf("pub %d: Timed out, %llu samples written.\n", publisherId, sample.count);
+            printf("pub %d: Timed out, %llu samples written.\n", arg->id, sample.count);
         }
     }
 
@@ -360,7 +359,7 @@ unsigned long long samplesReceived(HandleMap *count1, HandleMap *count2, int pre
     return total;
 }
 
-int subscriber(int subscriberId)
+int subscriber(ddsbench_threadArg *arg)
 {
     int result = EXIT_SUCCESS;
     unsigned long long maxCycles = 0;
@@ -389,7 +388,7 @@ int subscriber(int subscriberId)
         /** A DDS_Topic is created for our sample type on the domain participant. */
         DDS_TopicQos *topicQos = ddsbench_getQos(ddsbench_qos);
         e->topic = DDS_DomainParticipant_create_topic(
-            ddsbench_dp, ddsbench_topicname, typename, DDS_TOPIC_QOS_DEFAULT, NULL, 0);
+            ddsbench_dp, arg->topicName, typename, DDS_TOPIC_QOS_DEFAULT, NULL, 0);
         CHECK_HANDLE_MACRO(e->topic);
         DDS_free(typename);
 
@@ -405,6 +404,8 @@ int subscriber(int subscriberId)
                 parameterList);
             CHECK_HANDLE_MACRO(e->filter);
             DDS_free(parameterList);
+        } else {
+            e->filter = NULL;
         }
 
         /** A DDS_Subscriber is created on the domain participant. */
@@ -480,7 +481,7 @@ int subscriber(int subscriberId)
         unsigned long payloadSize = 0;
         double deltaTime = 0;
 
-        if ((ddsbench_numsub == 1) || (subscriberId == 1)) {
+        if (arg->id == ddsbench_numsub) {
             printf("\n");
             printf("Throughput measurements\n");
             printf("          Total Received        Missing   Transfer rate              Publishers\n");
@@ -505,7 +506,7 @@ int subscriber(int subscriberId)
             for (i = 0; !DDS_GuardCondition_get_trigger_value(terminated) && i < samples->_length; i++) {
                 ph = info->_buffer[i].publication_handle;
                 if (info->_buffer[i].instance_state != DDS_ALIVE_INSTANCE_STATE){
-                    printf("sub %2d: lost publisher %d\n", subscriberId, samples->_buffer[i].id);
+                    printf("sub %2d: lost publisher %d\n", arg->id, samples->_buffer[i].id);
                     remove_handle(count, ph);
                 } else if (info->_buffer[i].valid_data) {
                     /** Check that the sample is the next one expected */
@@ -542,7 +543,7 @@ int subscriber(int subscriberId)
                     deltaTime = (double)exampleTimevalToMicroseconds(&deltaTv) / US_IN_ONE_SEC;
 
                     printf("sub %2d: %8.2lfK %9.2lfMB %9llu %8.2lfK %9.2lf Mbit/s %7lu\n",
-                        subscriberId,
+                        arg->id,
                         (double)samplesReceived(count, startCount, FALSE) / (double)1000,
                         (double)received / (double)BYTES_IN_MEGABYTE,
                         outOfOrder,
@@ -590,16 +591,15 @@ int subscriber(int subscriberId)
     /** Cleanup entities */
     DDS_free(e->waitSet);
     DDS_free(e->typeSupport);
-    DDS_free(terminated);
     free(e);
 
     return result;
 }
 
 void* ddsbench_throughputSubscriberThread(void *arg) {
-    subscriber((intptr_t)arg);
+    subscriber(arg);
 }
 
 void* ddsbench_throughputPublisherThread(void *arg) {
-    publisher((intptr_t)arg);
+    publisher(arg);
 }

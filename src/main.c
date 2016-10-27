@@ -20,6 +20,7 @@ unsigned int ddsbench_numsub = -1; /* -1 indicates no value specified */
 unsigned int ddsbench_numpub = -1; /* -1 indicates no value specified */
 unsigned int ddsbench_subid = 0; /* -1 indicates no value specified */
 unsigned int ddsbench_pubid = 0; /* -1 indicates no value specified */
+unsigned int ddsbench_numtopic = 1;
 char ddsbench_topicname[256];
 char ddsbench_filtername[256];
 
@@ -62,6 +63,7 @@ static void printUsage(void)
       "  --payload bytes       Specify payload of messages\n"
       "  --numsub count        Specify number of subscribers\n"
       "  --numpub count        Specify number of publishers\n"
+      "  --numtopic count      Specify the number of topics to write to\n"
       "  --pubid offset        Specify an offset for the publisher id\n"
       "  --subid offset        Specify an offset for the subscriber id\n"
       "  --filter              Specify filter in OMG-DDS compliant SQL\n"
@@ -94,6 +96,12 @@ static void printUsage(void)
       "measure filter overhead is:\n"
       " ddsbench latency --filter \"filter < 10\"\n"
       "\n"
+      "If specifying more than one topic, the number of configured publishers and\n"
+      "subscribers will be multiplied by the number of topics. For example:\n"
+      " ddsbench throughput --numsub 1 --numpub 2 --numtopic 3\n"
+      "This command creates 3 subscribers and 6 publishers. Subscribers and\n"
+      "publishers from different topics do not communicate with each other.\n"
+      "\n"
     );
 }
 
@@ -110,6 +118,7 @@ static int parseArguments(int argc, char *argv[])
             else if (!strcmp(argv[i], "--payload")) ddsbench_payload = atoi(argv[i + 1]), i++;
             else if (!strcmp(argv[i], "--numsub")) ddsbench_numsub = atoi(argv[i + 1]), i++;
             else if (!strcmp(argv[i], "--numpub")) ddsbench_numpub = atoi(argv[i + 1]), i++;
+            else if (!strcmp(argv[i], "--numtopic")) ddsbench_numtopic = atoi(argv[i + 1]), i++;
             else if (!strcmp(argv[i], "--subid")) ddsbench_subid = atoi(argv[i + 1]), i++;
             else if (!strcmp(argv[i], "--pubid")) ddsbench_pubid = atoi(argv[i + 1]), i++;
             else throw("invalid option %s", argv[1]);
@@ -202,6 +211,7 @@ int main(int argc, char *argv[])
     if (ddsbench_pubid) {
         printf("  publisher id: %d\n", ddsbench_pubid);
     }
+    printf("  # topics: %d\n", ddsbench_numtopic);
     printf("  # subscribers: %d\n", ddsbench_numsub);
     printf("  # publishers: %d\n", ddsbench_numpub);
 
@@ -229,56 +239,50 @@ int main(int argc, char *argv[])
     CHECK_HANDLE_MACRO(ddsbench_dp);
 
     /* Start publisher and subscriber threads */
-    pthread_t *threads = malloc((ddsbench_numsub + ddsbench_numpub) * sizeof(pthread_t));
+    pthread_t *threads = malloc((ddsbench_numsub + ddsbench_numpub) * sizeof(pthread_t) * ddsbench_numtopic);
     if (!threads)
     {
         throw("out of memory");
     }
 
-    printf("ddsbench: starting %d threads\n", ddsbench_numpub + ddsbench_numsub);
+    printf("ddsbench: starting %d threads\n", (ddsbench_numpub + ddsbench_numsub) * ddsbench_numtopic);
 
-    int i;
-    if (!strcmp(ddsbench_mode, "latency"))
-    {
-        for (i = 0; i < ddsbench_numsub; i++)
-        {
-            if (pthread_create
-              (&threads[i], NULL, ddsbench_latencySubscriberThread, (void*)(intptr_t)i + ddsbench_subid))
-            {
-                throw("failed to create thread: %s", strerror(errno));
-            }
-        }
+    int topic = 0, sub = ddsbench_subid, pub = ddsbench_pubid;
+    int mode = !strcmp(ddsbench_mode, "latency");
 
-        for (i = 0; i < ddsbench_numpub; i++)
+    while (topic < ddsbench_numtopic) {
+        int total = sub + ddsbench_numsub;
+        for (; sub < total; sub++)
         {
+            ddsbench_threadArg *arg = malloc(sizeof(ddsbench_threadArg));
+            arg->id = sub;
+            sprintf(arg->topicName, "%s_%d", ddsbench_topicname, topic);
             if (pthread_create
-              (&threads[i + ddsbench_numsub], NULL, ddsbench_latencyPublisherThread, (void*)(intptr_t)i + ddsbench_pubid))
-            {
-                throw("failed to create thread: %s", strerror(errno));
-            }
-        }
-    } else {
-        for (i = 0; i < ddsbench_numsub; i++)
-        {
-            if (pthread_create
-              (&threads[i], NULL, ddsbench_throughputSubscriberThread, (void*)(intptr_t)i + ddsbench_subid))
+              (&threads[sub], NULL, mode ? ddsbench_latencySubscriberThread : ddsbench_throughputSubscriberThread, arg))
             {
                 throw("failed to create thread: %s", strerror(errno));
             }
         }
 
-        for (i = 0; i < ddsbench_numpub; i++)
+        total = pub + ddsbench_numpub;
+        for (; pub < total; pub++)
         {
-            if (pthread_create(
-              &threads[i + ddsbench_numsub], NULL, ddsbench_throughputPublisherThread, (void*)(intptr_t)i + ddsbench_pubid))
+            ddsbench_threadArg *arg = malloc(sizeof(ddsbench_threadArg));
+            arg->id = pub;
+            sprintf(arg->topicName, "%s_%d", ddsbench_topicname, topic);
+            if (pthread_create
+              (&threads[pub + sub], NULL, mode ? ddsbench_latencyPublisherThread : ddsbench_throughputPublisherThread, arg))
             {
                 throw("failed to create thread: %s", strerror(errno));
             }
         }
+
+        topic ++;
     }
 
     /* Wait for threads to finish */
-    for (i = 0; i < ddsbench_numsub + ddsbench_numpub; i++)
+    int i;
+    for (i = 0; i < sub + pub; i++)
     {
         if (pthread_join(threads[i], NULL))
         {
