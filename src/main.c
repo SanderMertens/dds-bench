@@ -247,7 +247,7 @@ int main(int argc, char *argv[])
 
     printf("ddsbench: starting %d threads\n", (ddsbench_numpub + ddsbench_numsub) * ddsbench_numtopic);
 
-    int topic = 0, sub = ddsbench_subid, pub = ddsbench_pubid;
+    int topic = 0, thread = 0, sub = ddsbench_subid, pub = ddsbench_pubid;
     int mode = !strcmp(ddsbench_mode, "latency");
 
     while (topic < ddsbench_numtopic) {
@@ -258,10 +258,11 @@ int main(int argc, char *argv[])
             arg->id = sub;
             sprintf(arg->topicName, "%s_%d", ddsbench_topicname, topic);
             if (pthread_create
-              (&threads[sub], NULL, mode ? ddsbench_latencySubscriberThread : ddsbench_throughputSubscriberThread, arg))
+              (&threads[thread], NULL, mode ? ddsbench_latencySubscriberThread : ddsbench_throughputSubscriberThread, arg))
             {
                 throw("failed to create thread: %s", strerror(errno));
             }
+            thread ++;
         }
 
         total = pub + ddsbench_numpub;
@@ -271,10 +272,11 @@ int main(int argc, char *argv[])
             arg->id = pub;
             sprintf(arg->topicName, "%s_%d", ddsbench_topicname, topic);
             if (pthread_create
-              (&threads[pub + sub], NULL, mode ? ddsbench_latencyPublisherThread : ddsbench_throughputPublisherThread, arg))
+              (&threads[thread], NULL, mode ? ddsbench_latencyPublisherThread : ddsbench_throughputPublisherThread, arg))
             {
                 throw("failed to create thread: %s", strerror(errno));
             }
+            thread ++;
         }
 
         topic ++;
@@ -282,11 +284,11 @@ int main(int argc, char *argv[])
 
     /* Wait for threads to finish */
     int i;
-    for (i = 0; i < sub + pub; i++)
+    for (i = 0; i < thread; i++)
     {
         if (pthread_join(threads[i], NULL))
         {
-            throw("failed to join thread: %s", strerror(errno));
+            throw("failed to join thread %d: %s", i, strerror(errno));
         }
     }
 
