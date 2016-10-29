@@ -14,6 +14,8 @@ extern char *ddsbench_filter;
 extern unsigned int ddsbench_payload;
 extern unsigned int ddsbench_numsub;
 extern unsigned int ddsbench_numpub;
+extern unsigned int ddsbench_subid;
+extern unsigned int ddsbench_pubid;
 extern char ddsbench_topicname[256];
 extern char ddsbench_filtername[256];
 
