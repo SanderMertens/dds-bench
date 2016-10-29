@@ -481,7 +481,7 @@ int subscriber(ddsbench_threadArg *arg)
         unsigned long payloadSize = 0;
         double deltaTime = 0;
 
-        if (arg->id == ddsbench_numsub) {
+        if (arg->id == ddsbench_subid) {
             printf("\n");
             printf("Throughput measurements\n");
             printf("          Total Received        Missing   Transfer rate              Publishers\n");

@@ -327,7 +327,7 @@ int ping(ddsbench_threadArg *arg)
         warmUp = FALSE;
         printf("sub %d: Warm up complete.\n", arg->id);
 
-        if (arg->id == ddsbench_numsub) {
+        if (arg->id == ddsbench_subid) {
             printf("\n");
             printf("          Round trip measurements (in us)\n");
             printf("                      Round trip time [us]         Write-access time [us]       Read-access time [us]\n");
