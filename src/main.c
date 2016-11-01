@@ -23,7 +23,7 @@ unsigned int ddsbench_pubid = 0; /* -1 indicates no value specified */
 unsigned int ddsbench_numtopic = 1;
 unsigned int ddsbench_burstsize = 1;
 unsigned int ddsbench_burstinterval = 0;
-unsigned int ddsbench_pollingdelay = 0;
+unsigned int ddsbench_pollingdelay = 1;
 char ddsbench_topicname[256];
 char ddsbench_filtername[256];
 
@@ -73,9 +73,9 @@ static void printUsage(void)
       "  --help                Display this usage information\n"
       "\n"
       "Throughput only options:\n"
-      "  --burstsize           Number of samples to send in a burst (default = 1)\n"
-      "  --burstinterval       Number of ms between bursts (default = 0)\n"
-      "  --pollingdelay        Delay between polling in ms, 0 is event based (default = 0)\n"
+      "  --burstsize (pub)     Number of samples to send in a burst (default = 1)\n"
+      "  --burstinterval (pub) Number of ms between bursts (default = 0)\n"
+      "  --pollingdelay (sub)  Delay between polling in ms, 0 is event based (default = 1)\n"
       "\n"
       "Use a combination of the following letters to specify a QoS:\n"
       "  v - volatile\n"
@@ -183,6 +183,10 @@ static int parseArguments(int argc, char *argv[])
         throw("no publishers or subscribers specified.");
     }
 
+    if (!strcmp(ddsbench_mode, "throughput")) {
+        ddsbench_payload = 2048;
+    }
+
     sprintf(ddsbench_topicname, "%s_%s", ddsbench_mode, ddsbench_qos);
     sprintf(ddsbench_filtername, "%s_%s_filter", ddsbench_mode, ddsbench_qos);
 
@@ -219,6 +223,7 @@ int main(int argc, char *argv[])
     if (!strcmp(ddsbench_mode, "throughput")) {
         printf("  burstsize: %d\n", ddsbench_burstsize);
         printf("  burstinterval: %d\n", ddsbench_burstinterval);
+        printf("  pollingdelay: %d\n", ddsbench_pollingdelay);
     }
     if (ddsbench_subid) {
         printf("  subscriber id: %d\n", ddsbench_subid);
