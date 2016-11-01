@@ -183,10 +183,6 @@ static int parseArguments(int argc, char *argv[])
         throw("no publishers or subscribers specified.");
     }
 
-    if (!strcmp(ddsbench_mode, "throughput")) {
-        ddsbench_payload = 2048;
-    }
-
     sprintf(ddsbench_topicname, "%s_%s", ddsbench_mode, ddsbench_qos);
     sprintf(ddsbench_filtername, "%s_%s_filter", ddsbench_mode, ddsbench_qos);
 
