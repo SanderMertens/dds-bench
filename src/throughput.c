@@ -367,6 +367,7 @@ int subscriber(ddsbench_threadArg *arg)
     char *partitionName = "Throughput example";
     SubEntities *e = malloc(sizeof(*e));
     DDS_ReturnCode_t status;
+    unsigned long long totalSamples = 0;
 
     maxCycles = 10; /* The number of times to output statistics before terminating */
     pollingDelay = ddsbench_pollingdelay; /* The number of ms to wait between reads (0 = event based) */
@@ -509,6 +510,8 @@ int subscriber(ddsbench_threadArg *arg)
                     printf("sub %2d: lost publisher %d\n", arg->id, samples->_buffer[i].id);
                     remove_handle(count, ph);
                 } else if (info->_buffer[i].valid_data) {
+                    totalSamples ++;
+
                     /** Check that the sample is the next one expected */
                     pubCount = retrieve_handle(count, ph);
                     pubStartCount = retrieve_handle(startCount, ph);
@@ -544,7 +547,7 @@ int subscriber(ddsbench_threadArg *arg)
 
                     printf("sub %2d: %8.2lfK %9.2lfMB %9llu %8.2lfK %9.2lf Mbit/s %7lu\n",
                         arg->id,
-                        (double)samplesReceived(count, startCount, FALSE) / (double)1000,
+                        (double)totalSamples / (double)1000,
                         (double)received / (double)BYTES_IN_MEGABYTE,
                         outOfOrder,
                         (samplesReceived(count, prevCount, TRUE) / deltaTime) / 1000,
@@ -573,7 +576,7 @@ int subscriber(ddsbench_threadArg *arg)
         deltaTv = exampleSubtractTimevalFromTimeval(&time, &startTime);
         deltaTime = (double)exampleTimevalToMicroseconds(&deltaTv) / US_IN_ONE_SEC;
         printf("\nTotal received: %llu samples, %llu bytes\n",
-            samplesReceived(count, startCount, FALSE), received);
+            totalSamples, received);
         printf("Out of order: %llu samples\n",
             outOfOrder);
         printf("Average transfer rate: %.2lf samples/s, %.2lf Mbit/s\n",
