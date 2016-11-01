@@ -375,6 +375,13 @@ int ping(ddsbench_threadArg *arg)
                     cleanup(&e);
                     exit(0);
                 }
+                else if (e.info->_buffer[0].instance_state != DDS_ALIVE_INSTANCE_STATE)
+                {
+                    printf("sub %d: ERROR: Ping received a not alive sample. Has pong terminated already?\n", arg->id);
+
+                    cleanup(&e);
+                    exit(0);
+                }
             }
             status = ddsbench_LatencyDataReader_return_loan(e.reader, e.samples, e.info);
             CHECK_STATUS_MACRO(status);

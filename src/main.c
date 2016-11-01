@@ -21,6 +21,8 @@ unsigned int ddsbench_numpub = -1; /* -1 indicates no value specified */
 unsigned int ddsbench_subid = 0; /* -1 indicates no value specified */
 unsigned int ddsbench_pubid = 0; /* -1 indicates no value specified */
 unsigned int ddsbench_numtopic = 1;
+unsigned int ddsbench_burstsize = 1;
+unsigned int ddsbench_burstinterval = 0;
 char ddsbench_topicname[256];
 char ddsbench_filtername[256];
 
@@ -61,6 +63,8 @@ static void printUsage(void)
       "Options:\n"
       "  --qos v|t|p|b|r       Specify QoS (see QoS codes)\n"
       "  --payload bytes       Specify payload of messages\n"
+      "  --burstsize           Number of samples to send in a burst (default = 1)\n"
+      "  --burstinterval       Number of microseconds between bursts (default = 0)\n"
       "  --numsub count        Specify number of subscribers\n"
       "  --numpub count        Specify number of publishers\n"
       "  --numtopic count      Specify the number of topics to write to\n"
@@ -116,6 +120,8 @@ static int parseArguments(int argc, char *argv[])
             if (!strcmp(argv[i], "--qos")) ddsbench_qos = argv[i + 1], i++;
             else if (!strcmp(argv[i], "--filter")) ddsbench_filter = argv[i + 1], i++;
             else if (!strcmp(argv[i], "--payload")) ddsbench_payload = atoi(argv[i + 1]), i++;
+            else if (!strcmp(argv[i], "--burstsize")) ddsbench_burstsize = atoi(argv[i + 1]), i++;
+            else if (!strcmp(argv[i], "--burstinterval")) ddsbench_burstinterval = atoi(argv[i + 1]), i++;
             else if (!strcmp(argv[i], "--numsub")) ddsbench_numsub = atoi(argv[i + 1]), i++;
             else if (!strcmp(argv[i], "--numpub")) ddsbench_numpub = atoi(argv[i + 1]), i++;
             else if (!strcmp(argv[i], "--numtopic")) ddsbench_numtopic = atoi(argv[i + 1]), i++;
@@ -205,6 +211,10 @@ int main(int argc, char *argv[])
         printf("  filter: %s\n", ddsbench_filter);
     }
     printf("  payload: %d bytes\n", ddsbench_payload);
+    if (!strcmp(ddsbench_mode, "throughput")) {
+        printf("  burstsize: %d\n", ddsbench_burstsize);
+        printf("  burstinterval: %d\n", ddsbench_burstinterval);
+    }
     if (ddsbench_subid) {
         printf("  subscriber id: %d\n", ddsbench_subid);
     }
@@ -278,7 +288,6 @@ int main(int argc, char *argv[])
             }
             thread ++;
         }
-
         topic ++;
     }
 

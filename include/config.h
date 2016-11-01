@@ -12,6 +12,8 @@ extern char *ddsbench_mode;
 extern char *ddsbench_qos;
 extern char *ddsbench_filter;
 extern unsigned int ddsbench_payload;
+extern unsigned int ddsbench_burstsize;
+extern unsigned int ddsbench_burstinterval;
 extern unsigned int ddsbench_numsub;
 extern unsigned int ddsbench_numpub;
 extern unsigned int ddsbench_subid;

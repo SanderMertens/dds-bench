@@ -198,8 +198,8 @@ int publisher(ddsbench_threadArg *arg)
     sample.payload._buffer = NULL;
 
     payloadSize = ddsbench_payload; /* The size of the payload in bytes */
-    burstInterval = 0; /* The time interval between each burst in ms */
-    burstSize = 1; /* The number of samples to send each burst */
+    burstInterval = ddsbench_burstinterval; /* The time interval between each burst in ms */
+    burstSize = ddsbench_burstsize; /* The number of samples to send each burst */
     timeOut = 0;
     partitionName = "throughput"; /* The name of the partition */
 
