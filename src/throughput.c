@@ -369,7 +369,7 @@ int subscriber(ddsbench_threadArg *arg)
     DDS_ReturnCode_t status;
 
     maxCycles = 10; /* The number of times to output statistics before terminating */
-    pollingDelay = 0; /* The number of ms to wait between reads (0 = event based) */
+    pollingDelay = ddsbench_pollingdelay; /* The number of ms to wait between reads (0 = event based) */
     partitionName = "throughput"; /* The name of the partition */
 
     /** Initialise entities */

@@ -23,6 +23,7 @@ unsigned int ddsbench_pubid = 0; /* -1 indicates no value specified */
 unsigned int ddsbench_numtopic = 1;
 unsigned int ddsbench_burstsize = 1;
 unsigned int ddsbench_burstinterval = 0;
+unsigned int ddsbench_pollingdelay = 0;
 char ddsbench_topicname[256];
 char ddsbench_filtername[256];
 
@@ -63,8 +64,6 @@ static void printUsage(void)
       "Options:\n"
       "  --qos v|t|p|b|r       Specify QoS (see QoS codes)\n"
       "  --payload bytes       Specify payload of messages\n"
-      "  --burstsize           Number of samples to send in a burst (default = 1)\n"
-      "  --burstinterval       Number of microseconds between bursts (default = 0)\n"
       "  --numsub count        Specify number of subscribers\n"
       "  --numpub count        Specify number of publishers\n"
       "  --numtopic count      Specify the number of topics to write to\n"
@@ -72,6 +71,11 @@ static void printUsage(void)
       "  --subid offset        Specify an offset for the subscriber id\n"
       "  --filter              Specify filter in OMG-DDS compliant SQL\n"
       "  --help                Display this usage information\n"
+      "\n"
+      "Throughput only options:\n"
+      "  --burstsize           Number of samples to send in a burst (default = 1)\n"
+      "  --burstinterval       Number of ms between bursts (default = 0)\n"
+      "  --pollingdelay        Delay between polling in ms, 0 is event based (default = 0)\n"
       "\n"
       "Use a combination of the following letters to specify a QoS:\n"
       "  v - volatile\n"
@@ -122,6 +126,7 @@ static int parseArguments(int argc, char *argv[])
             else if (!strcmp(argv[i], "--payload")) ddsbench_payload = atoi(argv[i + 1]), i++;
             else if (!strcmp(argv[i], "--burstsize")) ddsbench_burstsize = atoi(argv[i + 1]), i++;
             else if (!strcmp(argv[i], "--burstinterval")) ddsbench_burstinterval = atoi(argv[i + 1]), i++;
+            else if (!strcmp(argv[i], "--pollingdelay")) ddsbench_pollingdelay = atoi(argv[i + 1]), i++;
             else if (!strcmp(argv[i], "--numsub")) ddsbench_numsub = atoi(argv[i + 1]), i++;
             else if (!strcmp(argv[i], "--numpub")) ddsbench_numpub = atoi(argv[i + 1]), i++;
             else if (!strcmp(argv[i], "--numtopic")) ddsbench_numtopic = atoi(argv[i + 1]), i++;
