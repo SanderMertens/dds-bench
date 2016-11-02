@@ -151,6 +151,7 @@ void initialise(Entities *e, const char *topicName, const char *pubPartition, co
     status = DDS_Publisher_copy_from_topic_qos(e->publisher, dwQos, topicQos);
     CHECK_STATUS_MACRO(status);
     dwQos->writer_data_lifecycle.autodispose_unregistered_instances = FALSE;
+    dwQos->transport_priority.value = 10;
     e->writer = DDS_Publisher_create_datawriter(e->publisher, e->topic, dwQos, 0, DDS_STATUS_MASK_NONE);
     CHECK_HANDLE_MACRO(e->writer);
     DDS_free(dwQos);
