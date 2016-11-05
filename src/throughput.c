@@ -243,6 +243,8 @@ int publisher(ddsbench_threadArg *arg)
         CHECK_STATUS_MACRO(status);
         dwQos->history.kind = DDS_KEEP_ALL_HISTORY_QOS;
         dwQos->resource_limits.max_samples = 100;
+        dwQos->reliability.max_blocking_time.sec = 10;
+        dwQos->reliability.max_blocking_time.nanosec = 0;
         e->writer = DDS_Publisher_create_datawriter(e->publisher, e->topic, dwQos, NULL, 0);
         CHECK_HANDLE_MACRO(e->writer);
         DDS_free(dwQos);
@@ -429,7 +431,7 @@ int subscriber(ddsbench_threadArg *arg)
         status = DDS_Subscriber_copy_from_topic_qos(e->subscriber, drQos, topicQos);
         CHECK_STATUS_MACRO(status);
         drQos->history.kind = DDS_KEEP_ALL_HISTORY_QOS;
-        drQos->resource_limits.max_samples = 400;
+        drQos->resource_limits.max_samples = 4000;
         if (!e->filter) {
             e->reader = DDS_Subscriber_create_datareader(e->subscriber, e->topic, drQos, NULL, 0);
         } else {
