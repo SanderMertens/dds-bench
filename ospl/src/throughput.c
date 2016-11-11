@@ -14,12 +14,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <config.h>
 #include <ddsbench.h>
+#include <../idl/ddsbench.h>
 #include <example_utilities.h>
 #include <example_error_sac.h>
-#include <qos.h>
-#include <throughput.h>
+#include <ospl.h>
 
 #ifdef GENERATING_EXAMPLE_DOXYGEN
 GENERATING_EXAMPLE_DOXYGEN /* workaround doxygen bug */
@@ -183,7 +182,7 @@ static void copy_handles(HandleMap *from, HandleMap *to)
  * This function performs the publisher role in this example.
  * @return 0 if a sample is successfully written, 1 otherwise.
  */
-int publisher(ddsbench_threadArg *arg)
+int tpub(ddsbench_threadArg *arg)
 {
     int result = EXIT_SUCCESS;
     unsigned long payloadSize = 4096;
@@ -197,9 +196,9 @@ int publisher(ddsbench_threadArg *arg)
 
     sample.payload._buffer = NULL;
 
-    payloadSize = ddsbench_payload; /* The size of the payload in bytes */
-    burstInterval = ddsbench_burstinterval; /* The time interval between each burst in ms */
-    burstSize = ddsbench_burstsize; /* The number of samples to send each burst */
+    payloadSize = arg->ctx->payload; /* The size of the payload in bytes */
+    burstInterval = arg->ctx->burstinterval; /* The time interval between each burst in ms */
+    burstSize = arg->ctx->burstsize; /* The number of samples to send each burst */
     timeOut = 0;
     partitionName = "throughput"; /* The name of the partition */
 
@@ -216,7 +215,7 @@ int publisher(ddsbench_threadArg *arg)
         CHECK_STATUS_MACRO(status);
 
         /** A DDS_Topic is created for our sample type on the domain participant. */
-        DDS_TopicQos *topicQos = ddsbench_getQos(ddsbench_qos);
+        DDS_TopicQos *topicQos = ddsbench_getQos(arg->ctx->qos);
         e->topic = DDS_DomainParticipant_create_topic(
             ddsbench_dp, arg->topicName, typename, DDS_TOPIC_QOS_DEFAULT, NULL, 0);
         CHECK_HANDLE_MACRO(e->topic);
@@ -361,7 +360,7 @@ unsigned long long samplesReceived(HandleMap *count1, HandleMap *count2, int pre
     return total;
 }
 
-int subscriber(ddsbench_threadArg *arg)
+int tsub(ddsbench_threadArg *arg)
 {
     int result = EXIT_SUCCESS;
     unsigned long long maxCycles = 0;
@@ -372,7 +371,7 @@ int subscriber(ddsbench_threadArg *arg)
     unsigned long long totalSamples = 0;
 
     maxCycles = 10; /* The number of times to output statistics before terminating */
-    pollingDelay = ddsbench_pollingdelay; /* The number of ms to wait between reads (0 = event based) */
+    pollingDelay = arg->ctx->pollingdelay; /* The number of ms to wait between reads (0 = event based) */
     partitionName = "throughput"; /* The name of the partition */
 
     /** Initialise entities */
@@ -389,21 +388,22 @@ int subscriber(ddsbench_threadArg *arg)
         CHECK_STATUS_MACRO(status);
 
         /** A DDS_Topic is created for our sample type on the domain participant. */
-        DDS_TopicQos *topicQos = ddsbench_getQos(ddsbench_qos);
+        DDS_TopicQos *topicQos = ddsbench_getQos(arg->ctx->qos);
         e->topic = DDS_DomainParticipant_create_topic(
             ddsbench_dp, arg->topicName, typename, DDS_TOPIC_QOS_DEFAULT, NULL, 0);
+
         CHECK_HANDLE_MACRO(e->topic);
         DDS_free(typename);
 
         /** Create a ContentFilteredTopic if a filter is specified. */
-        if (ddsbench_filter) {
+        if (arg->ctx->filter) {
             DDS_StringSeq *parameterList = DDS_StringSeq__alloc();
             CHECK_HANDLE_MACRO(parameterList);
             e->filter = DDS_DomainParticipant_create_contentfilteredtopic(
                 ddsbench_dp,
-                ddsbench_filtername,
+                arg->ctx->filtername,
                 e->topic,
-                ddsbench_filter,
+                arg->ctx->filter,
                 parameterList);
             CHECK_HANDLE_MACRO(e->filter);
             DDS_free(parameterList);
@@ -484,7 +484,7 @@ int subscriber(ddsbench_threadArg *arg)
         unsigned long payloadSize = 0;
         double deltaTime = 0;
 
-        if (arg->id == ddsbench_subid) {
+        if (arg->id == arg->ctx->subid) {
             printf("\n");
             printf("Throughput measurements\n");
             printf("          Total Received        Missing   Transfer rate              Publishers\n");
@@ -599,12 +599,4 @@ int subscriber(ddsbench_threadArg *arg)
     free(e);
 
     return result;
-}
-
-void* ddsbench_throughputSubscriberThread(void *arg) {
-    subscriber(arg);
-}
-
-void* ddsbench_throughputPublisherThread(void *arg) {
-    publisher(arg);
 }

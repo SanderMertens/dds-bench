@@ -1,3 +1,4 @@
+
 /*
  *                         OpenSplice DDS
  *
@@ -10,15 +11,21 @@
  *
  */
 
-#ifndef THROUGHPUT_H
-#define THROUGHPUT_H
+
+#ifndef QOS_H
+#define QOS_H
+
+#include <dds_dcps.h>
 
 #ifdef __cplusplus
 extern "c" {
 #endif
 
-void* ddsbench_throughputSubscriberThread(void *arg);
-void* ddsbench_throughputPublisherThread(void *arg);
+extern DDS_DomainParticipantFactory ddsbench_factory;
+extern DDS_DomainParticipant ddsbench_dp;
+extern DDS_GuardCondition terminated;
+
+DDS_TopicQos* ddsbench_getQos(char *qos);
 
 #ifdef __cplusplus
 }

@@ -4,55 +4,26 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <dlfcn.h>
 
-#include <config.h>
-#include <throughput.h>
-#include <example_utilities.h>
-#include <example_error_sac.h>
-#include <roundtrip.h>
+#include <ddsbench.h>
+
+static ddsbench_context ctx = {
+  .qos = "vr",
+  .pubid = 1,
+  .subid = 1,
+  .payload = 8,
+  .burstsize = 1,
+  .pollingdelay = 1
+};
 
 /** ddsbench configuration options */
 char *ddsbench_mode = "latency";
-char *ddsbench_qos = "vr";
-char *ddsbench_filter = NULL;
-unsigned int ddsbench_payload = 4;
-unsigned int ddsbench_numsub = -1; /* -1 indicates no value specified */
-unsigned int ddsbench_numpub = -1; /* -1 indicates no value specified */
-unsigned int ddsbench_subid = 0; /* -1 indicates no value specified */
-unsigned int ddsbench_pubid = 0; /* -1 indicates no value specified */
+char *ddsbench_lib = "ospl";
+unsigned int ddsbench_numsub = 1;
+unsigned int ddsbench_numpub = 1;
 unsigned int ddsbench_numtopic = 1;
-unsigned int ddsbench_burstsize = 1;
-unsigned int ddsbench_burstinterval = 0;
-unsigned int ddsbench_pollingdelay = 1;
 char ddsbench_topicname[256];
-char ddsbench_filtername[256];
-
-DDS_DomainParticipant ddsbench_dp;
-
-/** catch Ctrl-C */
-DDS_GuardCondition terminated;
-
-#ifndef _WIN32
-struct sigaction oldAction;
-#endif
-/*
- * Function to handle Ctrl-C presses.
- * @param fdwCtrlType Ctrl signal type
- */
-#ifdef _WIN32
-static DDS_boolean CtrlHandler(DWORD fdwCtrlType)
-{
-    DDS_ReturnCode_t status = DDS_GuardCondition_set_trigger_value(terminated, TRUE);
-    CHECK_STATUS_MACRO(status);
-    return TRUE; //Don't let other handlers handle this key
-}
-#else
-static void CtrlHandler(int fdwCtrlType)
-{
-    DDS_ReturnCode_t status = DDS_GuardCondition_set_trigger_value(terminated, TRUE);
-    CHECK_STATUS_MACRO(status);
-}
-#endif
 
 /** Error reporting */
 #define throw(...) { printf("error: " __VA_ARGS__); goto error; }
@@ -69,7 +40,8 @@ static void printUsage(void)
       "  --numtopic count      Specify the number of topics to write to\n"
       "  --pubid offset        Specify an offset for the publisher id\n"
       "  --subid offset        Specify an offset for the subscriber id\n"
-      "  --filter              Specify filter in OMG-DDS compliant SQL\n"
+      "  --filter sql          Specify filter in OMG-DDS compliant SQL\n"
+      "  --lib ospl|lite       Use Lite or OpenSplice (default)\n"
       "  --help                Display this usage information\n"
       "\n"
       "Throughput only options:\n"
@@ -121,17 +93,18 @@ static int parseArguments(int argc, char *argv[])
         if (argv[i][0] == '-')
         {
             if ((i == (argc - 1)) || !argv[i + 1][0]) throw("missing parameter for %s\n", argv[i]);
-            if (!strcmp(argv[i], "--qos")) ddsbench_qos = argv[i + 1], i++;
-            else if (!strcmp(argv[i], "--filter")) ddsbench_filter = argv[i + 1], i++;
-            else if (!strcmp(argv[i], "--payload")) ddsbench_payload = atoi(argv[i + 1]), i++;
-            else if (!strcmp(argv[i], "--burstsize")) ddsbench_burstsize = atoi(argv[i + 1]), i++;
-            else if (!strcmp(argv[i], "--burstinterval")) ddsbench_burstinterval = atoi(argv[i + 1]), i++;
-            else if (!strcmp(argv[i], "--pollingdelay")) ddsbench_pollingdelay = atoi(argv[i + 1]), i++;
+            if (!strcmp(argv[i], "--qos")) ctx.qos = argv[i + 1], i++;
+            else if (!strcmp(argv[i], "--filter")) ctx.filter = argv[i + 1], i++;
+            else if (!strcmp(argv[i], "--lib")) ddsbench_lib = argv[i + 1], i++;
+            else if (!strcmp(argv[i], "--payload")) ctx.payload = atoi(argv[i + 1]), i++;
+            else if (!strcmp(argv[i], "--burstsize")) ctx.burstsize = atoi(argv[i + 1]), i++;
+            else if (!strcmp(argv[i], "--burstinterval")) ctx.burstinterval = atoi(argv[i + 1]), i++;
+            else if (!strcmp(argv[i], "--pollingdelay")) ctx.pollingdelay = atoi(argv[i + 1]), i++;
             else if (!strcmp(argv[i], "--numsub")) ddsbench_numsub = atoi(argv[i + 1]), i++;
             else if (!strcmp(argv[i], "--numpub")) ddsbench_numpub = atoi(argv[i + 1]), i++;
             else if (!strcmp(argv[i], "--numtopic")) ddsbench_numtopic = atoi(argv[i + 1]), i++;
-            else if (!strcmp(argv[i], "--subid")) ddsbench_subid = atoi(argv[i + 1]), i++;
-            else if (!strcmp(argv[i], "--pubid")) ddsbench_pubid = atoi(argv[i + 1]), i++;
+            else if (!strcmp(argv[i], "--subid")) ctx.subid = atoi(argv[i + 1]), i++;
+            else if (!strcmp(argv[i], "--pubid")) ctx.pubid = atoi(argv[i + 1]), i++;
             else throw("invalid option %s", argv[1]);
         } else
         {
@@ -169,7 +142,7 @@ static int parseArguments(int argc, char *argv[])
         }
     }
 
-    if (ddsbench_filter) {
+    if (ctx.filter) {
         printf(
           "\n"
           "Note: when specifying a filter, throughput will appear to decrease\n"
@@ -183,17 +156,53 @@ static int parseArguments(int argc, char *argv[])
         throw("no publishers or subscribers specified.");
     }
 
-    sprintf(ddsbench_topicname, "%s_%s", ddsbench_mode, ddsbench_qos);
-    sprintf(ddsbench_filtername, "%s_%s_filter", ddsbench_mode, ddsbench_qos);
+    sprintf(ddsbench_topicname, "%s_%s", ddsbench_mode, ctx.qos);
+    sprintf(ctx.filtername, "%s_%s_filter", ddsbench_mode, ctx.qos);
 
     return 0;
 error:
     return -1;
 }
 
+int loadLibrary(char *file, ddsbench_context *ctx, ddsbench_libraryInterface *interface) {
+    void *lib = dlopen(file, RTLD_NOW);
+
+    if (!lib) {
+        throw("%s: %s\n", file, dlerror());
+    } else {
+        if (!(interface->init = dlsym(lib, "init"))) throw("%s: %s\n", file, dlerror());
+        if (!(interface->fini = dlsym(lib, "fini"))) throw("%s: %s\n", file, dlerror());
+        if (!(interface->lpub = dlsym(lib, "lpub"))) throw("%s: %s\n", file, dlerror());
+        if (!(interface->lsub = dlsym(lib, "lsub"))) throw("%s: %s\n", file, dlerror());
+        if (!(interface->tpub = dlsym(lib, "tpub"))) throw("%s: %s\n", file, dlerror());
+        if (!(interface->tsub = dlsym(lib, "tsub"))) throw("%s: %s\n", file, dlerror());
+        if (interface->init(ctx)) {
+            goto error;
+        }
+        interface->lib = lib;
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+void closeLibrary(char *file, ddsbench_libraryInterface *interface) {
+    if (interface->lib) {
+        interface->fini();
+        dlclose(interface->lib);
+    }
+}
+
 int main(int argc, char *argv[])
 {
-    DDS_ReturnCode_t status;
+    ddsbench_libraryInterface interface;
+
+    char cwd[1024], uri[1024];
+    if (!getcwd(cwd, sizeof(cwd))) {
+        printf("could not get current working directory\n");
+        goto error;
+    }
 
     if ((argc > 1) && !strcmp(argv[1], "--help"))
     {
@@ -208,51 +217,38 @@ int main(int argc, char *argv[])
     }
 
     printf("ddsbench v1.0\n");
-    printf("  config: %s\n", getenv("OSPL_URI"));
     printf("  mode: %s\n", ddsbench_mode);
-    printf("  qos: %s\n", ddsbench_qos);
+    printf("  qos: %s\n", ctx.qos);
     printf("  topic: %s\n", ddsbench_topicname);
-    if (ddsbench_filter) {
-        printf("  filter: %s\n", ddsbench_filter);
+    if (ctx.filter) {
+        printf("  filter: %s\n", ctx.filter);
     }
-    printf("  payload: %d bytes\n", ddsbench_payload);
+    printf("  payload: %d bytes\n", ctx.payload);
     if (!strcmp(ddsbench_mode, "throughput")) {
-        printf("  burstsize: %d\n", ddsbench_burstsize);
-        printf("  burstinterval: %d\n", ddsbench_burstinterval);
-        printf("  pollingdelay: %d\n", ddsbench_pollingdelay);
+        printf("  burstsize: %d\n", ctx.burstsize);
+        printf("  burstinterval: %d\n", ctx.burstinterval);
+        printf("  pollingdelay: %d\n", ctx.pollingdelay);
     }
-    if (ddsbench_subid) {
-        printf("  subscriber id: %d\n", ddsbench_subid);
+    if (ctx.subid) {
+        printf("  subscriber id: %d\n", ctx.subid);
     }
-    if (ddsbench_pubid) {
-        printf("  publisher id: %d\n", ddsbench_pubid);
+    if (ctx.pubid) {
+        printf("  publisher id: %d\n", ctx.pubid);
     }
     printf("  # topics: %d\n", ddsbench_numtopic);
     printf("  # subscribers: %d\n", ddsbench_numsub);
     printf("  # publishers: %d\n", ddsbench_numpub);
 
-    /* Register handler for Ctrl-C */
-#ifdef _WIN32
-    SetConsoleCtrlHandler((PHANDLER_ROUTINE)CtrlHandler, TRUE);
-#else
-    struct sigaction sat;
-    sat.sa_handler = CtrlHandler;
-    sigemptyset(&sat.sa_mask);
-    sat.sa_flags = 0;
-    sigaction(SIGINT,&sat,&oldAction);
-#endif
-    terminated = DDS_GuardCondition__alloc();
+    /* Load library for product */
+    char lib[1024]; sprintf(lib, "%s/%s/lib%s.so", cwd, ddsbench_lib, ddsbench_lib);
+    if (loadLibrary(lib, &ctx, &interface)) {
+        goto error;
+    }
 
-    printf("\n");
-    printf("ddsbench: create participant\n");
-
-    /* Create single DomainParticipant */
-    DDS_DomainParticipantFactory factory = DDS_DomainParticipantFactory_get_instance();
-    CHECK_HANDLE_MACRO(factory);
-
-    ddsbench_dp = DDS_DomainParticipantFactory_create_participant(
-        factory, DDS_DOMAIN_ID_DEFAULT, DDS_PARTICIPANT_QOS_DEFAULT, 0, DDS_STATUS_MASK_NONE);
-    CHECK_HANDLE_MACRO(ddsbench_dp);
+    /* Initialize benchmark library */
+    if (interface.init(&ctx)) {
+        goto error;
+    }
 
     /* Start publisher and subscriber threads */
     pthread_t *threads = malloc((ddsbench_numsub + ddsbench_numpub) * sizeof(pthread_t) * ddsbench_numtopic);
@@ -263,7 +259,7 @@ int main(int argc, char *argv[])
 
     printf("ddsbench: starting %d threads\n", (ddsbench_numpub + ddsbench_numsub) * ddsbench_numtopic);
 
-    int topic = 0, thread = 0, sub = ddsbench_subid, pub = ddsbench_pubid;
+    int topic = 0, thread = 0, sub = ctx.subid, pub = ctx.pubid;
     int mode = !strcmp(ddsbench_mode, "latency");
 
     while (topic < ddsbench_numtopic) {
@@ -272,9 +268,10 @@ int main(int argc, char *argv[])
         {
             ddsbench_threadArg *arg = malloc(sizeof(ddsbench_threadArg));
             arg->id = sub;
+            arg->ctx = &ctx;
             sprintf(arg->topicName, "%s_%d", ddsbench_topicname, topic);
             if (pthread_create
-              (&threads[thread], NULL, mode ? ddsbench_latencySubscriberThread : ddsbench_throughputSubscriberThread, arg))
+              (&threads[thread], NULL, mode ? interface.lsub : interface.tsub, arg))
             {
                 throw("failed to create thread: %s", strerror(errno));
             }
@@ -286,9 +283,10 @@ int main(int argc, char *argv[])
         {
             ddsbench_threadArg *arg = malloc(sizeof(ddsbench_threadArg));
             arg->id = pub;
+            arg->ctx = &ctx;
             sprintf(arg->topicName, "%s_%d", ddsbench_topicname, topic);
             if (pthread_create
-              (&threads[thread], NULL, mode ? ddsbench_latencyPublisherThread : ddsbench_throughputPublisherThread, arg))
+              (&threads[thread], NULL, mode ? interface.lpub : interface.tpub, arg))
             {
                 throw("failed to create thread: %s", strerror(errno));
             }
@@ -307,16 +305,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    status = DDS_DomainParticipant_delete_contained_entities(ddsbench_dp);
-    CHECK_STATUS_MACRO(status);
-    status = DDS_DomainParticipantFactory_delete_participant(factory, ddsbench_dp);
-    CHECK_STATUS_MACRO(status);
-
-    #ifdef _WIN32
-        SetConsoleCtrlHandler(0, FALSE);
-    #else
-        sigaction(SIGINT,&oldAction, 0);
-    #endif
+    /* Deinitialize benchmark library */
+    interface.fini(ctx);
 
     return 0;
 error:

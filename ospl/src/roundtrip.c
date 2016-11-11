@@ -14,12 +14,11 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include <config.h>
 #include <ddsbench.h>
+#include <../idl/ddsbench.h>
 #include <example_utilities.h>
 #include <example_error_sac.h>
-#include <roundtrip.h>
-#include <qos.h>
+#include <ospl.h>
 
 #ifdef GENERATING_EXAMPLE_DOXYGEN
 GENERATING_EXAMPLE_DOXYGEN /* workaround doxygen bug */
@@ -85,7 +84,7 @@ typedef struct
 * This function initialises the entities used by ping and pong, or exit
 * on any failure.
 */
-void initialise(Entities *e, const char *topicName, const char *pubPartition, const char *subPartition)
+void initialise(Entities *e, ddsbench_context *ctx, const char *topicName, const char *pubPartition, const char *subPartition)
 {
     DDS_PublisherQos *pubQos;
     DDS_DataWriterQos *dwQos;
@@ -106,7 +105,7 @@ void initialise(Entities *e, const char *topicName, const char *pubPartition, co
     CHECK_STATUS_MACRO(status);
 
     /** A DDS_Topic is created for our sample type on the domain participant. */
-    topicQos = ddsbench_getQos(ddsbench_qos);
+    topicQos = ddsbench_getQos(ctx->qos);
     e->topic = DDS_DomainParticipant_create_topic(
         ddsbench_dp, topicName, typeSupportName,
         DDS_TOPIC_QOS_DEFAULT, 0, DDS_STATUS_MASK_NONE);
@@ -115,14 +114,14 @@ void initialise(Entities *e, const char *topicName, const char *pubPartition, co
     DDS_free(typeSupportName);
 
     /** A DDS_ContentFilteredTopic is created if a filter is specified. */
-    if (ddsbench_filter) {
+    if (ctx->filter) {
         DDS_StringSeq *parameterList = DDS_StringSeq__alloc();
         CHECK_HANDLE_MACRO(parameterList);
         e->filter = DDS_DomainParticipant_create_contentfilteredtopic(
             ddsbench_dp,
-            ddsbench_filtername,
+            ctx->filtername,
             e->topic,
-            ddsbench_filter,
+            ctx->filter,
             parameterList);
         CHECK_HANDLE_MACRO(e->filter);
         DDS_free(parameterList);
@@ -178,7 +177,7 @@ void initialise(Entities *e, const char *topicName, const char *pubPartition, co
     CHECK_STATUS_MACRO(status);
     status = DDS_Subscriber_copy_from_topic_qos(e->subscriber, drQos, topicQos);
     CHECK_STATUS_MACRO(status);
-    if (!ddsbench_filter) {
+    if (!ctx->filter) {
         e->reader = DDS_Subscriber_create_datareader(
             e->subscriber, e->topic, drQos, 0, DDS_STATUS_MASK_NONE);
     } else {
@@ -264,7 +263,7 @@ void cleanup(Entities *e)
  * This function performs the Ping role in this example.
  * @return 0 if a sample is successfully written, 1 otherwise.
  */
-int ping(ddsbench_threadArg *arg)
+int lsub(ddsbench_threadArg *arg)
 {
     unsigned long payloadSize = 0;
     unsigned long long numSamples = 0;
@@ -289,11 +288,11 @@ int ping(ddsbench_threadArg *arg)
     char pingPartition[32], pongPartition[32];
     sprintf(pingPartition, "ping_%d", arg->id);
     sprintf(pongPartition, "pong_%d", arg->id);
-    initialise(&e, arg->topicName, pingPartition, pongPartition);
+    initialise(&e, arg->ctx, arg->topicName, pingPartition, pongPartition);
 
     setbuf(stdout, NULL);
 
-    payloadSize = ddsbench_payload;
+    payloadSize = arg->ctx->payload;
 
     e.data->payload._length = payloadSize;
     e.data->payload._maximum = payloadSize;
@@ -328,7 +327,7 @@ int ping(ddsbench_threadArg *arg)
         warmUp = FALSE;
         printf("sub %d: Warm up complete.\n", arg->id);
 
-        if (arg->id == ddsbench_subid) {
+        if (arg->id == arg->ctx->subid) {
             printf("\n");
             printf("          Round trip measurements (in us)\n");
             printf("                      Round trip time [us]         Write-access time [us]       Read-access time [us]\n");
@@ -340,6 +339,9 @@ int ping(ddsbench_threadArg *arg)
     for(i = 0; !DDS_GuardCondition_get_trigger_value(terminated); i++)
     {
         /** Write a sample that pong can send back */
+        struct os_time pre, post;
+        pre = os_timeGetElapsed();
+
         e.data->filter = i % 10;
         preWriteTime = exampleGetTime();
         status = ddsbench_LatencyDataWriter_write(e.writer, e.data, DDS_HANDLE_NIL);
@@ -355,8 +357,10 @@ int ping(ddsbench_threadArg *arg)
             /** Take sample and check that it is valid */
             preTakeTime = exampleGetTime();
             status = ddsbench_LatencyDataReader_take(e.reader, e.samples, e.info, DDS_LENGTH_UNLIMITED,
-                                        DDS_ANY_SAMPLE_STATE, DDS_ANY_VIEW_STATE, DDS_ANY_INSTANCE_STATE);
+                                        DDS_NOT_READ_SAMPLE_STATE, DDS_ANY_VIEW_STATE, DDS_ANY_INSTANCE_STATE);
+            post = os_timeGetElapsed();
             postTakeTime = exampleGetTime();
+
             CHECK_STATUS_MACRO(status);
 
             if(!DDS_GuardCondition_get_trigger_value(terminated))
@@ -475,7 +479,7 @@ int ping(ddsbench_threadArg *arg)
  * Runs the Pong role in this example.
  * @return 0 if a sample is successfully read, 1 otherwise.
  */
-int pong(ddsbench_threadArg *arg)
+int lpub(ddsbench_threadArg *arg)
 {
     DDS_ReturnCode_t status;
     DDS_Duration_t waitTimeout = DDS_DURATION_INFINITE;
@@ -486,7 +490,7 @@ int pong(ddsbench_threadArg *arg)
     char pingPartition[32], pongPartition[32];
     sprintf(pingPartition, "ping_%d", arg->id);
     sprintf(pongPartition, "pong_%d", arg->id);
-    initialise(&e, arg->topicName, pongPartition, pingPartition);
+    initialise(&e, arg->ctx, arg->topicName, pongPartition, pingPartition);
 
     printf("pub %d: Waiting for samples from ping to send back...\n", arg->id);
     fflush(stdout);
@@ -503,6 +507,7 @@ int pong(ddsbench_threadArg *arg)
             status = ddsbench_LatencyDataReader_take(
                 e.reader, e.samples, e.info, DDS_LENGTH_UNLIMITED, DDS_ANY_SAMPLE_STATE,
                 DDS_ANY_VIEW_STATE, DDS_ANY_INSTANCE_STATE);
+
             CHECK_STATUS_MACRO(status);
             for (i = 0; !DDS_GuardCondition_get_trigger_value(terminated) && i < e.samples->_length; i++)
             {
@@ -529,12 +534,4 @@ int pong(ddsbench_threadArg *arg)
 
     cleanup(&e);
     return 0;
-}
-
-void* ddsbench_latencySubscriberThread(void *arg) {
-    ping(arg);
-}
-
-void* ddsbench_latencyPublisherThread(void *arg) {
-    pong(arg);
 }

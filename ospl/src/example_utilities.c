@@ -98,11 +98,12 @@ ExampleTimeStats* exampleAddMicrosecondsToTimeStats(ExampleTimeStats* stats, uns
             printf("ERROR: Failed to expand values array");
         }
     }
+
     if(stats->valuesSize < stats->valuesMax)
     {
         stats->values[stats->valuesSize++] = microseconds;
     }
-    stats->average = (stats->count * stats->average + microseconds)/(stats->count + 1);
+    stats->average = (double)(stats->count * stats->average + microseconds)/(double)(stats->count + 1);
     stats->min = (stats->count == 0 || microseconds < stats->min) ? microseconds : stats->min;
     stats->max = (stats->count == 0 || microseconds > stats->max) ? microseconds : stats->max;
     stats->count++;
@@ -163,7 +164,6 @@ struct timeval exampleGetTime()
     os_current_time = os_timeGetElapsed();
     current_time.tv_sec = os_current_time.tv_sec;
     current_time.tv_usec = os_current_time.tv_nsec / NS_IN_ONE_US;
-
     return current_time;
 }
 
