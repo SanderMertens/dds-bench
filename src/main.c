@@ -20,8 +20,8 @@ static ddsbench_context ctx = {
 /** ddsbench configuration options */
 char *ddsbench_mode = "latency";
 char *ddsbench_lib = "ospl";
-unsigned int ddsbench_numsub = 1;
-unsigned int ddsbench_numpub = 1;
+unsigned int ddsbench_numsub = -1;
+unsigned int ddsbench_numpub = -1;
 unsigned int ddsbench_numtopic = 1;
 char ddsbench_topicname[256];
 
@@ -164,7 +164,7 @@ error:
     return -1;
 }
 
-int loadLibrary(char *file, ddsbench_context *ctx, ddsbench_libraryInterface *interface) {
+static int loadLibrary(char *file, ddsbench_context *ctx, ddsbench_libraryInterface *interface) {
     void *lib = dlopen(file, RTLD_NOW);
 
     if (!lib) {
@@ -187,7 +187,7 @@ error:
     return -1;
 }
 
-void closeLibrary(char *file, ddsbench_libraryInterface *interface) {
+static void closeLibrary(ddsbench_libraryInterface *interface) {
     if (interface->lib) {
         interface->fini();
         dlclose(interface->lib);
@@ -242,11 +242,6 @@ int main(int argc, char *argv[])
     /* Load library for product */
     char lib[1024]; sprintf(lib, "%s/%s/lib%s.so", cwd, ddsbench_lib, ddsbench_lib);
     if (loadLibrary(lib, &ctx, &interface)) {
-        goto error;
-    }
-
-    /* Initialize benchmark library */
-    if (interface.init(&ctx)) {
         goto error;
     }
 
@@ -306,7 +301,7 @@ int main(int argc, char *argv[])
     }
 
     /* Deinitialize benchmark library */
-    interface.fini(ctx);
+    closeLibrary(&interface);
 
     return 0;
 error:

@@ -28,7 +28,7 @@ typedef struct ddsbench_threadArg {
 typedef struct ddsbench_libraryInterface {
     /* Product initialization */
     int (*init)(ddsbench_context *ctx);
-    void (*fini)();
+    void (*fini)(void);
 
     /* Thread callbacks */
     void* (*lpub)(void *ctx);
