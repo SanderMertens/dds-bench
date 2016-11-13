@@ -6,3 +6,13 @@ module RoundTripModule
   };
   #pragma keylist DataType
 };
+
+module ThroughputModule
+{
+  struct DataType
+  {
+    unsigned long long count;
+    sequence<octet> payload;
+  };
+  #pragma keylist DataType
+};

@@ -101,8 +101,12 @@ int lsub (ddsbench_threadArg *arg)
   dds_entity_t subscriber;
   dds_waitset_t waitSet;
 
-  const char *pubPartitions[] = { "ping" };
-  const char *subPartitions[] = { "pong" };
+  char pingPartition[32], pongPartition[32];
+  sprintf(pingPartition, "ping_%d", arg->id);
+  sprintf(pongPartition, "pong_%d", arg->id);
+
+  const char *pubPartitions[] = { pingPartition };
+  const char *subPartitions[] = { pongPartition };
   dds_qos_t *pubQos;
   dds_qos_t *dwQos;
   dds_qos_t *drQos;
@@ -406,8 +410,11 @@ int lpub (ddsbench_threadArg *arg)
   RoundTripModule_DataType data[MAX_SAMPLES];
   void * samples[MAX_SAMPLES];
   dds_sample_info_t info[MAX_SAMPLES];
-  const char *pubPartitions[] = { "pong" };
-  const char *subPartitions[] = { "ping" };
+  char pingPartition[32], pongPartition[32];
+  sprintf(pingPartition, "ping_%d", arg->id);
+  sprintf(pongPartition, "pong_%d", arg->id);
+  const char *pubPartitions[] = { pongPartition };
+  const char *subPartitions[] = { pingPartition };
   dds_qos_t *qos;
   dds_condition_t readCond;
 
