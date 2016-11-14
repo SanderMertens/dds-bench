@@ -125,7 +125,11 @@ static void data_available_handler (dds_entity_t reader)
 
       if (this_sample->count != current->count)
       {
-        outOfOrder++;
+        /* Temporarily disable outOfOrder- this doesn't work with multiple
+         * subscribers because of the global administration. Need listener
+         * userdata to be able to accurately keep track of this */
+        /* outOfOrder++; */
+      } else {
       }
       current->count = this_sample->count + 1;
 
