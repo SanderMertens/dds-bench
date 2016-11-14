@@ -183,7 +183,9 @@ int tsub(ddsbench_threadArg *arg)
   status = dds_init (0, NULL);
   DDS_ERR_CHECK (status, DDS_CHECK_REPORT | DDS_CHECK_EXIT);
 
-  status = dds_thread_init ("tsub");
+  char threadName[16];
+  sprintf(threadName, "tsub_%d", arg->id);
+  status = dds_thread_init (threadName);
   DDS_ERR_CHECK (status, DDS_CHECK_REPORT | DDS_CHECK_EXIT);
 
   maxCycles = 0; /* The number of times to output statistics before terminating */
@@ -349,7 +351,9 @@ int tpub(ddsbench_threadArg *arg) {
   status = dds_init (0, NULL);
   DDS_ERR_CHECK (status, DDS_CHECK_REPORT | DDS_CHECK_EXIT);
 
-  status = dds_thread_init ("tpub");
+  char threadName[16];
+  sprintf(threadName, "tpub_%d", arg->id);
+  status = dds_thread_init (threadName);
   DDS_ERR_CHECK (status, DDS_CHECK_REPORT | DDS_CHECK_EXIT);
 
   payloadSize = arg->ctx->payload; /* The size of the payload in bytes */

@@ -162,7 +162,7 @@ int lsub (ddsbench_threadArg *arg)
   status = dds_init(0, NULL);
   DDS_ERR_CHECK (status, DDS_CHECK_REPORT | DDS_CHECK_EXIT);
 
-  status = dds_thread_init ("lsub");
+  status = dds_thread_init (pingPartition);
   DDS_ERR_CHECK (status, DDS_CHECK_REPORT | DDS_CHECK_EXIT);
 
   status = dds_participant_create (&participant, DDS_DOMAIN_DEFAULT, NULL, NULL);
@@ -429,7 +429,7 @@ int lpub (ddsbench_threadArg *arg)
   status = dds_init(0, NULL);
   DDS_ERR_CHECK (status, DDS_CHECK_REPORT | DDS_CHECK_EXIT);
 
-  status = dds_thread_init ("lpub");
+  status = dds_thread_init (pongPartition);
   DDS_ERR_CHECK (status, DDS_CHECK_REPORT | DDS_CHECK_EXIT);
 
   status = dds_participant_create (&participant, DDS_DOMAIN_DEFAULT, NULL, NULL);
