@@ -15,6 +15,7 @@ typedef struct ddsbench_context {
     unsigned int pollingdelay;
     unsigned int subid;
     unsigned int pubid;
+    unsigned int topicid;
     char topicname[256];
     char filtername[256];
 } ddsbench_context;

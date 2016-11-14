@@ -12,6 +12,7 @@ static ddsbench_context ctx = {
   .qos = "vr",
   .pubid = 1,
   .subid = 1,
+  .topicid = 0,
   .payload = 8,
   .burstsize = 1,
   .pollingdelay = 1
@@ -40,6 +41,7 @@ static void printUsage(void)
       "  --numtopic count      Specify the number of topics to write to\n"
       "  --pubid offset        Specify an offset for the publisher id\n"
       "  --subid offset        Specify an offset for the subscriber id\n"
+      "  --topicid offset      Specify an offset for the topic id\n"
       "  --filter sql          Specify filter in OMG-DDS compliant SQL\n"
       "  --lib ospl|lite       Use Lite or OpenSplice (default)\n"
       "  --help                Display this usage information\n"
@@ -105,6 +107,7 @@ static int parseArguments(int argc, char *argv[])
             else if (!strcmp(argv[i], "--numtopic")) ddsbench_numtopic = atoi(argv[i + 1]), i++;
             else if (!strcmp(argv[i], "--subid")) ctx.subid = atoi(argv[i + 1]), i++;
             else if (!strcmp(argv[i], "--pubid")) ctx.pubid = atoi(argv[i + 1]), i++;
+            else if (!strcmp(argv[i], "--topicid")) ctx.topicid = atoi(argv[i + 1]), i++;
             else throw("invalid option %s", argv[1]);
         } else
         {
@@ -254,10 +257,10 @@ int main(int argc, char *argv[])
 
     printf("ddsbench: starting %d threads\n", (ddsbench_numpub + ddsbench_numsub) * ddsbench_numtopic);
 
-    int topic = 0, thread = 0, sub = ctx.subid, pub = ctx.pubid;
+    int topic = ctx.topicid, thread = 0, sub = ctx.subid, pub = ctx.pubid;
     int mode = !strcmp(ddsbench_mode, "latency");
 
-    while (topic < ddsbench_numtopic) {
+    while (topic < (ddsbench_numtopic + ctx.topicid)) {
         int total = sub + ddsbench_numsub;
         for (; sub < total; sub++)
         {
