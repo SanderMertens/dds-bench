@@ -379,7 +379,6 @@ int lsub (ddsbench_threadArg *arg)
   status = dds_waitset_detach (waitSet, terminated);
   DDS_ERR_CHECK (status, DDS_CHECK_REPORT | DDS_CHECK_EXIT);
   dds_condition_delete (readCond);
-  dds_condition_delete (terminated);
   status = dds_waitset_delete (waitSet);
   DDS_ERR_CHECK (status, DDS_CHECK_REPORT | DDS_CHECK_EXIT);
 
@@ -525,7 +524,6 @@ int lpub (ddsbench_threadArg *arg)
   status = dds_waitset_detach (waitSet, terminated);
   DDS_ERR_CHECK (status, DDS_CHECK_REPORT | DDS_CHECK_EXIT);
   dds_condition_delete (readCond);
-  dds_condition_delete (terminated);
   status = dds_waitset_delete (waitSet);
   DDS_ERR_CHECK (status, DDS_CHECK_REPORT | DDS_CHECK_EXIT);
 

@@ -48,7 +48,7 @@ void fini(void) {
 #else
     sigaction (SIGINT, &oldAction, 0);
 #endif
-
-    //dds_entity_delete (ddsbench_dp);
+    dds_entity_delete (ddsbench_dp);
+    dds_condition_delete (terminated);
     dds_fini ();
 }

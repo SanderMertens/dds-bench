@@ -318,7 +318,6 @@ int tsub(ddsbench_threadArg *arg)
   DDS_ERR_CHECK (status, DDS_CHECK_REPORT | DDS_CHECK_EXIT);
   status = dds_waitset_detach (waitSet, gCond);
   DDS_ERR_CHECK (status, DDS_CHECK_REPORT | DDS_CHECK_EXIT);
-  dds_condition_delete (terminated);
   dds_condition_delete (gCond);
   status = dds_waitset_delete (waitSet);
   DDS_ERR_CHECK (status, DDS_CHECK_REPORT | DDS_CHECK_EXIT);
@@ -515,7 +514,6 @@ int tpub(ddsbench_threadArg *arg) {
 
   dds_free (sample.payload._buffer);
 
-  dds_condition_delete (terminated);
   dds_entity_delete (participant);
   dds_fini ();
 

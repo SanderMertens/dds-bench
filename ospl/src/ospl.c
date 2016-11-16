@@ -72,16 +72,16 @@ error:
 
 void fini()
 {
-  DDS_ReturnCode_t status = DDS_DomainParticipant_delete_contained_entities(ddsbench_dp);
+    #ifdef _WIN32
+        SetConsoleCtrlHandler(0, FALSE);
+    #else
+        sigaction(SIGINT,&oldAction, 0);
+    #endif
+    
+    DDS_ReturnCode_t status = DDS_DomainParticipant_delete_contained_entities(ddsbench_dp);
     CHECK_STATUS_MACRO(status);
     status = DDS_DomainParticipantFactory_delete_participant(ddsbench_factory, ddsbench_dp);
     CHECK_STATUS_MACRO(status);
-
-#ifdef _WIN32
-    SetConsoleCtrlHandler(0, FALSE);
-#else
-    sigaction(SIGINT,&oldAction, 0);
-#endif
 }
 
 DDS_TopicQos* ddsbench_getQos(char *qos) {
