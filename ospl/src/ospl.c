@@ -51,7 +51,7 @@ int init(ddsbench_context *config)
     char uri[1024], cwd[1024];
     getcwd(cwd, sizeof(cwd));
     sprintf(uri, "file://%s/ospl.xml", cwd);
-    setenv("OSPL_URI", uri, 1);
+    //setenv("OSPL_URI", uri, 1); temporarily disable overriding environment
 
     printf("\n");
     printf("ddsbench: create participant\n");
